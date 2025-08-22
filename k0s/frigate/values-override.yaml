@@ -1,0 +1,101 @@
+# Custom values for Frigate deployment
+# Overrides default values from the Helm chart
+
+# Ingress configuration for external access
+ingress:
+  enabled: true
+  ingressClassName: nginx  # Adjust based on your ingress controller (nginx, traefik, etc.)
+  annotations:
+    # NGINX annotations
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"  # Allow large video uploads
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "frigate"
+    # Optional: Enable HTTPS redirect
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Optional: cert-manager for automatic TLS
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: frigate.mctv3.local  # Change to your desired hostname
+      paths:
+        - path: '/'
+          pathType: Prefix
+          portName: http
+  tls: []
+  # Uncomment for TLS/HTTPS
+  # tls:
+  #   - secretName: frigate-tls
+  #     hosts:
+  #       - frigate.mctv3.local
+
+# Service configuration
+service:
+  type: ClusterIP  # Use ClusterIP since we're using Ingress
+  port: 5000
+
+# Persistence for recordings and clips
+persistence:
+  config:
+    enabled: true
+    storageClass: "local-path"  # k0s default storage class
+    size: 10Gi
+  media:
+    enabled: true
+    storageClass: "local-path"
+    size: 50Gi  # Adjust based on your storage needs
+
+# Resource limits for Raspberry Pi
+resources:
+  limits:
+    memory: 2Gi
+    cpu: 2000m
+  requests:
+    memory: 1Gi
+    cpu: 1000m
+
+# Basic Frigate configuration
+config: |
+  mqtt:
+    enabled: false  # Disable MQTT if not using Home Assistant
+  
+  detectors:
+    cpu1:
+      type: cpu
+      num_threads: 2
+  
+  # Add your cameras here
+  cameras:
+    # Example camera configuration
+    # front_door:
+    #   ffmpeg:
+    #     inputs:
+    #       - path: rtsp://username:password@camera-ip:554/stream
+    #         roles:
+    #           - detect
+    #           - record
+    #   detect:
+    #     width: 1920
+    #     height: 1080
+    #     fps: 5
+    #   record:
+    #     enabled: true
+    #     retain:
+    #       days: 7
+    #       mode: all
+    #   snapshots:
+    #     enabled: true
+    #     timestamp: true
+    #     retain:
+    #       default: 10
+
+# Environment variables
+env:
+  TZ: "America/Chicago"  # Set your timezone
+
+# Shared memory for frame processing
+shmSize: 256Mi  # Reduced for Raspberry Pi
+
+# Temp filesystem for cache
+tmpfs:
+  enabled: true
+  sizeLimit: 256Mi  # Reduced for Raspberry Pi
