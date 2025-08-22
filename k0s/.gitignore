@@ -1,0 +1,40 @@
+# WiFi configuration (contains passwords)
+wifi-config.sh
+
+# Kubernetes configuration
+kubeconfig.yaml
+kubeconfig
+
+# Backups
+backups/
+*.tar.gz
+validation-report-*.txt
+
+# k0s backups
+k0s-backup-*.tar.gz
+
+# Recovery documentation (may contain sensitive info)
+RECOVERY.md
+
+# Temporary files
+*.tmp
+*.backup
+*.bak
+*~
+
+# SSH keys (if accidentally placed here)
+*.pem
+*.key
+id_rsa*
+momscloset*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large backup/image files
+*.dmg
+*.dd
+*.img
+*.gz
+*.iso
