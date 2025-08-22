@@ -1,0 +1,47 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: mctv3-k0s
+spec:
+  hosts:
+  - ssh:
+      address: mctv3.local
+      user: alan
+      port: 22
+      keyPath: ~/.ssh/momscloset
+    role: controller+worker
+    uploadBinary: true
+    installFlags:
+    - --enable-metrics-scraper
+  
+  k0s:
+    version: 1.33.4+k0s.0
+    dynamicConfig: false
+    config:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: mctv3-cluster
+      spec:
+        api:
+          address: mctv3.local
+          port: 6443
+          k0sApiPort: 9443
+          sans:
+          - mctv3.local
+          - localhost
+          - 127.0.0.1
+        
+        storage:
+          type: etcd
+        
+        network:
+          provider: calico
+          calico:
+            mode: vxlan
+            overlay: Always
+          podCIDR: 10.244.0.0/16
+          serviceCIDR: 10.96.0.0/12
+        
+        telemetry:
+          enabled: false
