@@ -1,6 +1,6 @@
-# WiFi configuration (contains passwords)
-wifi-config.sh
-k0s/wifi-config.sh
+# Environment variables (contains secrets)
+.env
+k0s/.env
 
 # Kubernetes configuration
 kubeconfig.yaml
