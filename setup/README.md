@@ -12,7 +12,7 @@ This repository contains scripts for deploying and managing k0s Kubernetes on a 
 ## Scripts Overview
 
 ### 1. `setup-remote.sh`
-Prepares the Raspberry Pi for k0s installation without copying files.
+Prepares the Raspberry Pi for k0s installation by copying and executing the setup script remotely.
 - Enables memory cgroups (required for k0s)
 - Installs k0s binary
 - Configures system settings
@@ -22,7 +22,6 @@ Prepares the Raspberry Pi for k0s installation without copying files.
 Configures WiFi connection for deployment network.
 - Sets up connection to "momscloset" network
 - Can configure remotely via SSH or generate config for SD card
-- **Warning:** Contains WiFi credentials - do not commit to git!
 
 ### 3. `deploy.sh`
 Main deployment tool with interactive menu.

@@ -2,7 +2,7 @@
 set -e
 
 # Remote Setup Script for k0s on Raspberry Pi 5
-# Executes the setup script remotely without copying files
+# Copies and executes the setup script remotely
 
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
@@ -50,8 +50,13 @@ run_setup() {
     log_info "Target: alan@mctv3.local"
     echo ""
     
-    # Execute the script remotely via pipe
-    cat pi5-k0s-setup.sh | ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo bash -s"
+    # Copy script to remote and execute it (to handle interactive prompts)
+    log_info "Copying setup script to remote host..."
+    scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv3.local:/tmp/pi5-k0s-setup.sh
+    
+    # Execute the script remotely with TTY allocation for interactive prompts
+    log_info "Executing setup script..."
+    ssh -tt -i ~/.ssh/momscloset alan@mctv3.local "sudo bash /tmp/pi5-k0s-setup.sh"
     
     if [ $? -eq 0 ]; then
         log_info "Setup completed successfully!"
@@ -67,7 +72,7 @@ main() {
     echo "Remote k0s Setup for Raspberry Pi 5"
     echo "========================================="
     echo ""
-    echo "This will run the setup script directly on the Pi without copying files."
+    echo "This will copy and run the setup script on the Pi."
     echo "Target: alan@mctv3.local"
     echo ""
     echo "Continue? (y/n)"

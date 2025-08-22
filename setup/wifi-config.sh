@@ -207,13 +207,24 @@ echo "Configuring WiFi on $(hostname)..."
 
 # Use NetworkManager if available
 if command -v nmcli &> /dev/null; then
-    echo "Using NetworkManager..."
-    sudo nmcli dev wifi connect "$WIFI_SSID" password "$WIFI_PASSWORD" || {
-        echo "Updating existing connection..."
-        sudo nmcli connection modify "$WIFI_SSID" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$WIFI_PASSWORD"
-    }
-    sudo nmcli connection modify "$WIFI_SSID" connection.autoconnect yes
-    sudo nmcli connection modify "$WIFI_SSID" connection.autoconnect-priority 100
+    echo "Using NetworkManager to create WiFi profile..."
+    
+    # Check if connection already exists
+    if nmcli connection show "$WIFI_SSID" &>/dev/null; then
+        echo "Updating existing connection profile..."
+        sudo nmcli connection delete "$WIFI_SSID"
+    fi
+    
+    # Create a new connection profile (works even if network is not available)
+    echo "Creating WiFi connection profile for future use..."
+    sudo nmcli connection add type wifi con-name "$WIFI_SSID" \
+        ifname wlan0 ssid "$WIFI_SSID" \
+        wifi-sec.key-mgmt wpa-psk \
+        wifi-sec.psk "$WIFI_PASSWORD" \
+        connection.autoconnect yes \
+        connection.autoconnect-priority 100
+    
+    echo "WiFi profile created. Will auto-connect when network is available."
 else
     echo "Using wpa_supplicant..."
     WPA_CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
@@ -222,7 +233,13 @@ else
     [ -f "$WPA_CONF" ] && sudo cp "$WPA_CONF" "${WPA_CONF}.backup"
     
     # Generate config
-    WPA_PSK=$(wpa_passphrase "$WIFI_SSID" "$WIFI_PASSWORD" | grep -E '^\s*psk=' | cut -d= -f2)
+    # Check if wpa_passphrase is available, if not, use plain password
+    if command -v wpa_passphrase &> /dev/null; then
+        WPA_PSK=$(wpa_passphrase "$WIFI_SSID" "$WIFI_PASSWORD" | grep -E '^\s*psk=' | cut -d= -f2)
+    else
+        echo "wpa_passphrase not found, using plain password (less secure)"
+        WPA_PSK="\"$WIFI_PASSWORD\""
+    fi
     
     sudo tee "$WPA_CONF" > /dev/null << EOF
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -244,14 +261,33 @@ EOF
     sudo systemctl restart wpa_supplicant
 fi
 
-# Wait and test
-sleep 5
-echo "Network status:"
-ip addr show wlan0 2>/dev/null || echo "WiFi interface not found"
+# Verify configuration
 echo ""
-echo "Testing connectivity..."
-ping -c 1 8.8.8.8 &>/dev/null && echo "Internet: OK" || echo "Internet: Failed"
-ping -c 1 google.com &>/dev/null && echo "DNS: OK" || echo "DNS: Failed"
+echo "Verifying WiFi configuration..."
+if command -v nmcli &> /dev/null; then
+    # Show the created connection profile
+    nmcli connection show "$WIFI_SSID" | grep -E "(ssid|autoconnect|priority)" || true
+    echo ""
+    echo "WiFi profile status:"
+    if nmcli connection show | grep -q "$WIFI_SSID"; then
+        echo "✓ WiFi profile '$WIFI_SSID' created successfully"
+        echo "✓ Will auto-connect when network is available at deployment site"
+    else
+        echo "✗ Failed to create WiFi profile"
+    fi
+else
+    # Check wpa_supplicant config
+    if [ -f "/etc/wpa_supplicant/wpa_supplicant.conf" ] && grep -q "$WIFI_SSID" /etc/wpa_supplicant/wpa_supplicant.conf; then
+        echo "✓ WiFi configuration added to wpa_supplicant"
+        echo "✓ Will auto-connect when network is available at deployment site"
+    else
+        echo "✗ Failed to configure wpa_supplicant"
+    fi
+fi
+
+echo ""
+echo "Current network status:"
+ip addr show wlan0 2>/dev/null | grep -E "(state|inet)" || echo "WiFi interface: ready for deployment"
 
 REMOTE_SCRIPT
     

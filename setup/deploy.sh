@@ -121,14 +121,57 @@ deploy_cluster() {
 get_kubeconfig() {
     log_step "Retrieving kubeconfig..."
     
-    k0sctl kubeconfig --config cluster.yaml > kubeconfig.yaml
+    # Ask user where to save the kubeconfig
+    echo ""
+    echo "Where would you like to save the kubeconfig file?"
+    echo "1. Current directory (./kubeconfig.yaml)"
+    echo "2. ~/.kube/config (default kubectl location)"
+    echo "3. Custom path"
+    echo -n "Select an option (1-3): "
+    read -r save_option
+    
+    case $save_option in
+        1)
+            KUBECONFIG_PATH="./kubeconfig.yaml"
+            ;;
+        2)
+            KUBECONFIG_PATH="$HOME/.kube/config"
+            mkdir -p "$HOME/.kube"
+            # Backup existing config if it exists
+            if [ -f "$HOME/.kube/config" ]; then
+                cp "$HOME/.kube/config" "$HOME/.kube/config.backup.$(date +%Y%m%d_%H%M%S)"
+                log_info "Existing kubeconfig backed up"
+            fi
+            ;;
+        3)
+            echo -n "Enter custom path: "
+            read -r KUBECONFIG_PATH
+            # Expand tilde if present
+            KUBECONFIG_PATH="${KUBECONFIG_PATH/#\~/$HOME}"
+            # Create directory if it doesn't exist
+            mkdir -p "$(dirname "$KUBECONFIG_PATH")"
+            ;;
+        *)
+            log_error "Invalid option"
+            return 1
+            ;;
+    esac
+    
+    # Retrieve and save kubeconfig
+    k0sctl kubeconfig --config cluster.yaml > "$KUBECONFIG_PATH"
     
     if [ $? -eq 0 ]; then
-        log_info "Kubeconfig saved to kubeconfig.yaml"
+        log_info "Kubeconfig saved to $KUBECONFIG_PATH"
         echo ""
-        echo "To use kubectl with this cluster:"
-        echo "  export KUBECONFIG=\$(pwd)/kubeconfig.yaml"
-        echo "  kubectl get nodes"
+        
+        if [ "$save_option" = "2" ]; then
+            echo "kubectl is now configured to use this cluster by default"
+            echo "Test with: kubectl get nodes"
+        else
+            echo "To use kubectl with this cluster:"
+            echo "  export KUBECONFIG=$KUBECONFIG_PATH"
+            echo "  kubectl get nodes"
+        fi
     else
         log_error "Failed to retrieve kubeconfig"
         exit 1

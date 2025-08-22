@@ -1,27 +1,27 @@
 # Environment variables (contains secrets)
 .env
-k0s/.env
+setup/.env
 
 # Kubernetes configuration
 kubeconfig.yaml
 kubeconfig
-k0s/kubeconfig.yaml
-k0s/kubeconfig
+setup/kubeconfig.yaml
+setup/kubeconfig
 
 # Backups
 backups/
-k0s/backups/
+setup/backups/
 *.tar.gz
 validation-report-*.txt
-k0s/validation-report-*.txt
+setup/validation-report-*.txt
 
 # k0s backups
 k0s-backup-*.tar.gz
-k0s/k0s-backup-*.tar.gz
+setup/k0s-backup-*.tar.gz
 
 # Recovery documentation (may contain sensitive info)
 RECOVERY.md
-k0s/RECOVERY.md
+setup/RECOVERY.md
 
 # Temporary files
 *.tmp
@@ -34,10 +34,10 @@ k0s/RECOVERY.md
 *.key
 id_rsa*
 momscloset*
-k0s/*.pem
-k0s/*.key
-k0s/id_rsa*
-k0s/momscloset*
+setup/*.pem
+setup/*.key
+setup/id_rsa*
+setup/momscloset*
 
 # OS files
 .DS_Store
