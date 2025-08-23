@@ -2,8 +2,10 @@
 .env
 setup/.env
 
-# Cloudflare tunnel credentials
+# Cloudflare tunnel credentials and tokens
 k0s/cloudflare-tunnel/tunnel-credentials.yaml
+k0s/cloudflare-tunnel/tunnel-token-secret.yaml
+k0s/twingate/twingate-token-secret.yaml
 
 # Kubernetes configuration
 kubeconfig.yaml

@@ -3,14 +3,7 @@ kind: Kustomization
 
 namespace: cloudflare
 
+# Create the namespace and deployment
 resources:
   - namespace.yaml
-
-helmGlobals:
-  chartHome: helm
-
-helmCharts:
-  - name: cloudflare-tunnel
-    namespace: cloudflare
-    releaseName: cloudflared
-    valuesFile: values-override.yaml
+  - cloudflared-deployment.yaml
