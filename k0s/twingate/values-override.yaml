@@ -1,0 +1,13 @@
+# Twingate Connector Configuration
+connector:
+  network: "asandov"
+  existingSecret: "twingate-connector-tokens"
+
+# Resource limits for Raspberry Pi  
+resources:
+  limits:
+    memory: 256Mi
+    cpu: 200m
+  requests:
+    memory: 128Mi
+    cpu: 100m
