@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflare
+data:
+  config.yaml: |
+    tunnel: 03b29dbf-664a-451f-9f51-33980b1366f9
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    
+    # Ingress rules for routing
+    ingress:
+      # Route momscloset.asandov.com to Frigate
+      - hostname: momscloset.asandov.com
+        service: http://frigate.frigate.svc.cluster.local:5000
+        originRequest:
+          noTLSVerify: true
+          connectTimeout: 30s
+          tlsTimeout: 30s
+          tcpKeepAlive: 30s
+          keepAliveTimeout: 90s
+      
+      # Catch-all rule (required) - returns 404 for unmatched requests  
+      - service: http_status:404
+    
+    # Optional: Enable metrics
+    metrics: 0.0.0.0:20241

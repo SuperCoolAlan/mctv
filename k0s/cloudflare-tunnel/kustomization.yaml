@@ -3,7 +3,9 @@ kind: Kustomization
 
 namespace: cloudflare
 
-# Create the namespace and deployment
+# Create the namespace, config, and deployment
 resources:
   - namespace.yaml
+  - tunnel-config.yaml
+  # Note: tunnel-credentials-configmap.yaml must be created from template before deployment
   - cloudflared-deployment.yaml
