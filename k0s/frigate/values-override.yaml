@@ -44,20 +44,16 @@ config: |
   
   # Detectors configuration
   detectors:
-    # Coral TPU detector (temporarily disabled due to connectivity issues)
-    # coral:
-    #   type: edgetpu
-    #   device: usb
-    # CPU detector
-    cpu1:
-      type: cpu
-      num_threads: 2
-  
-  # Model configuration for EdgeTPU (commented out while Coral is disabled)
-  # model:
-  #   path: /edgetpu_model.tflite
-  #   width: 320
-  #   height: 320
+    # Coral TPU detector (REQUIRED - do not add CPU detector with EdgeTPU model!)
+    coral:
+      type: edgetpu
+      device: usb
+
+  # Model configuration for EdgeTPU
+  model:
+    path: /edgetpu_model.tflite
+    width: 320
+    height: 320
   
   # Camera configuration
   cameras:
@@ -104,3 +100,8 @@ shmSize: 256Mi  # Reduced for Raspberry Pi
 tmpfs:
   enabled: true
   sizeLimit: 256Mi  # Reduced for Raspberry Pi
+
+# Additional environment variables to fix cache issues
+extraEnvVars:
+  - name: FRIGATE_TMPFS_CACHE_SIZE
+    value: "256m"
