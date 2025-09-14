@@ -29,6 +29,39 @@ check_root() {
     fi
 }
 
+# Enable NVMe support for Raspberry Pi 5
+enable_nvme() {
+    log_info "Configuring NVMe support..."
+
+    # Try both possible locations for config.txt
+    CONFIG_FILE="/boot/firmware/config.txt"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        CONFIG_FILE="/boot/config.txt"
+    fi
+
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log_error "Could not find config.txt in /boot/firmware/ or /boot/"
+        exit 1
+    fi
+
+    # Backup original file
+    cp "$CONFIG_FILE" "${CONFIG_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+
+    # Check if PCIe is already enabled
+    if grep -q "^dtparam=pciex1" "$CONFIG_FILE"; then
+        log_info "PCIe for NVMe already enabled"
+    else
+        log_info "Adding PCIe configuration for NVMe to $CONFIG_FILE"
+        # Add PCIe enable parameter
+        echo "" >> "$CONFIG_FILE"
+        echo "# Enable PCIe for NVMe" >> "$CONFIG_FILE"
+        echo "dtparam=pciex1" >> "$CONFIG_FILE"
+
+        log_warn "PCIe configuration added. System MUST be rebooted for changes to take effect."
+        NEEDS_REBOOT=true
+    fi
+}
+
 # Enable memory cgroups (required for k0s)
 enable_cgroups() {
     log_info "Configuring memory cgroups..."
@@ -148,12 +181,13 @@ configure_system() {
         net-tools \
         iptables \
         arptables \
-        ebtables || {
+        ebtables \
+        parted || {
         log_warn "Some tools failed to install, attempting to fix..."
         apt-get install -f -y
         dpkg --configure -a
         # Try again with individual packages to identify any problematic ones
-        for pkg in curl wget vim htop net-tools iptables arptables ebtables; do
+        for pkg in curl wget vim htop net-tools iptables arptables ebtables parted; do
             apt-get install -y $pkg || log_warn "Failed to install $pkg"
         done
     }
@@ -174,6 +208,101 @@ configure_system() {
     echo "overlay" >> /etc/modules-load.d/k0s.conf
 }
 
+# Configure NVMe storage if available
+configure_nvme_storage() {
+    log_info "Checking for NVMe storage..."
+
+    # Check if NVMe device exists
+    if [ -b /dev/nvme0n1 ]; then
+        log_info "NVMe device detected at /dev/nvme0n1"
+
+        # Check if already partitioned
+        if ! lsblk /dev/nvme0n1 | grep -q nvme0n1p1; then
+            log_info "Creating partition on NVMe drive..."
+            # Create GPT partition table and single partition
+            parted -s /dev/nvme0n1 mklabel gpt
+            parted -s /dev/nvme0n1 mkpart primary ext4 0% 100%
+
+            # Wait for partition to appear
+            sleep 2
+
+            # Format the partition
+            log_info "Formatting NVMe partition..."
+            mkfs.ext4 -F /dev/nvme0n1p1
+        else
+            log_info "NVMe already partitioned"
+
+            # Check if partition has a filesystem
+            if ! blkid /dev/nvme0n1p1 | grep -q "TYPE="; then
+                log_info "Partition exists but no filesystem detected, formatting..."
+                mkfs.ext4 -F /dev/nvme0n1p1
+            else
+                # Get filesystem type
+                FS_TYPE=$(blkid -o value -s TYPE /dev/nvme0n1p1)
+                log_info "NVMe partition already formatted with $FS_TYPE filesystem"
+
+                # Warn if not ext4
+                if [ "$FS_TYPE" != "ext4" ]; then
+                    log_warn "NVMe is formatted as $FS_TYPE, not ext4. This may work but ext4 is recommended."
+                fi
+            fi
+        fi
+
+        # Create mount point
+        mkdir -p /mnt/nvme
+
+        # Check if already in fstab
+        if ! grep -q "/dev/nvme0n1p1" /etc/fstab; then
+            log_info "Adding NVMe to /etc/fstab..."
+            echo "/dev/nvme0n1p1 /mnt/nvme ext4 defaults,noatime 0 2" >> /etc/fstab
+        else
+            log_info "NVMe already in /etc/fstab"
+        fi
+
+        # Mount if not already mounted
+        if ! mount | grep -q "/mnt/nvme"; then
+            log_info "Mounting NVMe drive..."
+            mount /mnt/nvme
+        fi
+
+        # Create data directories for k0s
+        log_info "Creating k0s data directories on NVMe..."
+        mkdir -p /mnt/nvme/k0s
+        mkdir -p /mnt/nvme/containerd
+
+        # Create symlinks for k0s to use NVMe storage
+        if [ ! -L /var/lib/k0s ]; then
+            if [ -d /var/lib/k0s ]; then
+                log_warn "/var/lib/k0s exists as a directory, k0s may already be installed"
+                log_warn "To use NVMe storage, k0s should be installed fresh or migrated manually"
+            else
+                mkdir -p /mnt/nvme/k0s
+                ln -s /mnt/nvme/k0s /var/lib/k0s
+                log_info "Created symlink for k0s to use NVMe storage"
+            fi
+        else
+            log_info "k0s already configured to use symlinked storage"
+        fi
+
+        if [ ! -L /var/lib/containerd ]; then
+            if [ -d /var/lib/containerd ]; then
+                log_warn "/var/lib/containerd exists as a directory"
+                log_warn "To use NVMe storage for containerd, it should be migrated manually"
+            else
+                mkdir -p /mnt/nvme/containerd
+                ln -s /mnt/nvme/containerd /var/lib/containerd
+                log_info "Created symlink for containerd to use NVMe storage"
+            fi
+        else
+            log_info "containerd already configured to use symlinked storage"
+        fi
+
+        log_info "NVMe storage configured successfully"
+    else
+        log_info "No NVMe device detected, continuing with SD card storage"
+    fi
+}
+
 # Main execution
 main() {
     echo "========================================="
@@ -183,8 +312,10 @@ main() {
     log_info "Running in non-interactive mode"
 
     check_root
+    enable_nvme
     enable_cgroups
     configure_system
+    configure_nvme_storage
     install_k0s
 
     echo ""
@@ -194,7 +325,7 @@ main() {
     echo ""
 
     if [ "$NEEDS_REBOOT" = true ]; then
-        log_warn "IMPORTANT: System needs to reboot for cgroup changes to take effect."
+        log_warn "IMPORTANT: System needs to reboot for configuration changes to take effect."
         log_warn "The system will reboot automatically in 10 seconds..."
         sleep 10
         reboot

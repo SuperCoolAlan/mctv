@@ -13,6 +13,7 @@ spec:
     uploadBinary: true
     installFlags:
     - --enable-metrics-scraper
+    - --data-dir=/mnt/nvme/k0s
   
   k0s:
     version: 1.33.4+k0s.0
