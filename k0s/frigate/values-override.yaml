@@ -1,36 +1,15 @@
 # Custom values for Frigate deployment
 # Overrides default values from the Helm chart
 
-# Ingress configuration for external access
+# Ingress disabled - using Cloudflare Tunnel instead
 ingress:
-  enabled: true
-  ingressClassName: nginx  # Adjust based on your ingress controller (nginx, traefik, etc.)
-  annotations:
-    # NGINX annotations
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"  # Allow large video uploads
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/websocket-services: "frigate"
-    # Optional: Enable HTTPS redirect
-    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    # Optional: cert-manager for automatic TLS
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  hosts:
-    - host: frigate.mctv3.local  # Change to your desired hostname
-      paths:
-        - path: '/'
-          pathType: Prefix
-          portName: http
-  tls: []
-  # Uncomment for TLS/HTTPS
-  # tls:
-  #   - secretName: frigate-tls
-  #     hosts:
-  #       - frigate.mctv3.local
+  enabled: false
+  # Cloudflare Tunnel will route directly to the service:
+  # http://frigate.frigate.svc.cluster.local:5000
 
 # Service configuration
 service:
-  type: ClusterIP  # Use ClusterIP since we're using Ingress
+  type: ClusterIP  # ClusterIP is fine since Cloudflare Tunnel accesses it internally
   port: 5000
 
 # Persistence for recordings and clips
@@ -55,38 +34,63 @@ resources:
 
 # Basic Frigate configuration
 config: |
+  # Authentication configuration
+  auth:
+    enabled: true
+    reset_admin_password: true  # This will reset the admin password on next startup
+  
   mqtt:
     enabled: false  # Disable MQTT if not using Home Assistant
   
+  # Detectors configuration
   detectors:
+    # Coral TPU detector (commented out until hardware is available)
+    # coral:
+    #   type: edgetpu
+    #   device: usb
     cpu1:
       type: cpu
       num_threads: 2
   
-  # Add your cameras here
+  # Model configuration for EdgeTPU (commented out until hardware is available)
+  # model:
+  #   path: /edgetpu_model.tflite
+  #   width: 320
+  #   height: 320
+  
+  # Camera configuration
   cameras:
-    # Example camera configuration
-    # front_door:
-    #   ffmpeg:
-    #     inputs:
-    #       - path: rtsp://username:password@camera-ip:554/stream
-    #         roles:
-    #           - detect
-    #           - record
-    #   detect:
-    #     width: 1920
-    #     height: 1080
-    #     fps: 5
-    #   record:
-    #     enabled: true
-    #     retain:
-    #       days: 7
-    #       mode: all
-    #   snapshots:
-    #     enabled: true
-    #     timestamp: true
-    #     retain:
-    #       default: 10
+    reolink_camera:
+      enabled: false  # Disabled until camera is properly configured
+      ffmpeg:
+        inputs:
+          # Reolink main stream (high quality for recording)
+          - path: rtsp://admin:CHANGE_ME@10.0.1.18:554/h264Preview_01_main
+            roles:
+              - record
+          # Reolink sub stream (lower quality for detection)  
+          - path: rtsp://admin:CHANGE_ME@10.0.1.18:554/h264Preview_01_sub
+            roles:
+              - detect
+        # Reolink-specific settings
+        hwaccel_args: preset-rpi4-64bit
+        output_args:
+          record: preset-record-generic-audio-aac
+      detect:
+        enabled: false
+        width: 1920
+        height: 1080
+        fps: 5
+      record:
+        enabled: false
+        retain:
+          days: 7
+          mode: all
+      snapshots:
+        enabled: false
+        timestamp: true
+        retain:
+          default: 10
 
 # Environment variables
 env:

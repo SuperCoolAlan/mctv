@@ -1,0 +1,32 @@
+# Patch to enable Coral USB TPU pass-through for Frigate
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate
+  namespace: frigate
+spec:
+  template:
+    spec:
+      containers:
+      - name: frigate
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: usb-devices
+          mountPath: /dev/bus/usb
+        - name: sys
+          mountPath: /sys
+        env:
+        - name: FRIGATE_CORAL_USB
+          value: "true"
+      volumes:
+      - name: usb-devices
+        hostPath:
+          path: /dev/bus/usb
+          type: Directory
+      - name: sys
+        hostPath:
+          path: /sys
+          type: Directory
+      nodeSelector:
+        kubernetes.io/hostname: mctv3

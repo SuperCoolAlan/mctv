@@ -19,25 +19,16 @@ helmCharts:
     # valuesInline:
     #   key: value
 
-# Optional: Add patches for additional customization
-patches: []
-# Example patch to add labels
-# - target:
-#     kind: Deployment
-#     name: frigate
-#   patch: |-
-#     - op: add
-#       path: /metadata/labels/environment
-#       value: production
+# Patches for Coral USB support
+patches:
+  - path: coral-usb-patch.yaml
+    target:
+      kind: Deployment
+      name: frigate
 
-# Optional: Add config maps or secrets
+# ConfigMap generator removed - using direct resource instead
 configMapGenerator: []
-# - name: frigate-config
-#   files:
-#     - config.yaml
 
-secretGenerator: []
-# - name: frigate-credentials
-#   literals:
-#     - username=admin
-#     - password=secret
+# Secrets are managed via SOPS
+generators:
+  - secrets-generator.yaml
