@@ -130,7 +130,12 @@ k0sctl cluster configuration file. Defines:
 - API server configuration
 - k0s version
 
+**Important:** This configuration uses dynamic IP addressing. The cluster will automatically use whatever IP is assigned by DHCP. Do not hardcode IP addresses in this file.
+
 Edit this file to customize your deployment.
+
+### Note on `cluster-ip.yaml`
+If you see a `cluster-ip.yaml` file, this is an outdated configuration with hardcoded IPs. Do not use it. Always use `cluster.yaml` which supports dynamic IPs.
 
 ## Recovery Procedures
 

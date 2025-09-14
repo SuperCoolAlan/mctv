@@ -24,11 +24,7 @@ detect_coral() {
         echo "Expected device IDs: 1a6e:089a or 18d1:9302"
         echo ""
         echo "You can still set up the udev rules now and plug in the Coral later."
-        read -p "Continue anyway? (y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+        echo "Continuing with setup anyway..."
         return 1
     else
         echo "✓ Found Coral device: $CORAL_DEVICE"
@@ -109,11 +105,7 @@ install_edgetpu_runtime() {
         echo "  To switch to reduced frequency for safety:"
         echo "    sudo apt-get remove libedgetpu1-max"
         echo "    sudo apt-get install libedgetpu1-std"
-        read -p "Continue with current runtime? (y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+        echo "Continuing with current runtime..."
         return
     fi
     

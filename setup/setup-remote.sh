@@ -59,6 +59,12 @@ run_setup() {
         log_info "Copying Coral USB setup script..."
         scp -i ~/.ssh/momscloset setup-coral-usb.sh alan@mctv3.local:/home/alan/setup-coral-usb.sh
     fi
+
+    # Copy dynamic IP check script
+    if [ -f ensure-dynamic-ip.sh ]; then
+        log_info "Copying dynamic IP check script..."
+        scp -i ~/.ssh/momscloset ensure-dynamic-ip.sh alan@mctv3.local:/home/alan/ensure-dynamic-ip.sh
+    fi
     
     # Execute the script remotely with TTY allocation for interactive prompts
     log_info "Executing setup script..."

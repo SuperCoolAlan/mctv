@@ -24,11 +24,9 @@ spec:
         name: mctv3-cluster
       spec:
         api:
-          address: 10.0.1.16
           port: 6443
           k0sApiPort: 9443
           sans:
-          - 10.0.1.16
           - mctv3.local
           - localhost
           - 127.0.0.1

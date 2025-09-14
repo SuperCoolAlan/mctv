@@ -46,24 +46,30 @@ check_root() {
 enable_cgroups() {
     log_info "Configuring memory cgroups..."
     
-    CMDLINE_FILE="/boot/cmdline.txt"
-    
+    # Try both possible locations for cmdline.txt
+    CMDLINE_FILE="/boot/firmware/cmdline.txt"
     if [ ! -f "$CMDLINE_FILE" ]; then
-        log_error "Could not find $CMDLINE_FILE"
+        CMDLINE_FILE="/boot/cmdline.txt"
+    fi
+
+    if [ ! -f "$CMDLINE_FILE" ]; then
+        log_error "Could not find cmdline.txt in /boot/firmware/ or /boot/"
         exit 1
     fi
     
     # Backup original file
     cp "$CMDLINE_FILE" "${CMDLINE_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
     
-    # Check if cgroup settings already exist
-    if grep -q "cgroup_enable=memory" "$CMDLINE_FILE" && grep -q "cgroup_memory=1" "$CMDLINE_FILE"; then
-        log_info "Memory cgroups already enabled"
+    # Check if all required cgroup settings exist
+    if grep -q "cgroup_enable=cpuset" "$CMDLINE_FILE" && grep -q "cgroup_enable=memory" "$CMDLINE_FILE" && grep -q "cgroup_memory=1" "$CMDLINE_FILE"; then
+        log_info "All required cgroups already enabled"
         return 0
     else
         log_info "Adding cgroup configuration to $CMDLINE_FILE"
-        # Append cgroup settings to the existing line (cmdline.txt must be a single line)
-        sed -i 's/$/ cgroup_enable=memory cgroup_memory=1/' "$CMDLINE_FILE"
+        # Remove any existing partial cgroup settings first
+        sed -i 's/ cgroup_enable=cpuset//g; s/ cgroup_enable=memory//g; s/ cgroup_memory=1//g' "$CMDLINE_FILE"
+        # Append all required cgroup settings to the existing line (cmdline.txt must be a single line)
+        sed -i 's/$/ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' "$CMDLINE_FILE"
         
         log_warn "Cgroup configuration added. System MUST be rebooted for changes to take effect."
         NEEDS_REBOOT=true
@@ -167,7 +173,7 @@ show_next_steps() {
     echo "   - Or download from: https://github.com/k0sproject/k0sctl/releases"
     echo ""
     echo "3. Create a cluster.yaml file on your workstation with:"
-    echo "   - Host IP: $IP_ADDRESS"
+    echo "   - Hostname: mctv3.local"
     echo "   - Username: $(whoami)"
     echo "   - SSH key path: ~/.ssh/id_rsa"
     echo ""

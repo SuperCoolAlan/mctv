@@ -10,6 +10,9 @@ This repository contains everything needed to set up a k0s Kubernetes cluster on
 - (Optional) Google Coral USB TPU for AI object detection
 - (Optional) Powered USB 3.0 hub if using Coral USB
 
+### Important: Dynamic IP Configuration
+This setup uses **dynamic IP addressing** (DHCP). The cluster will work on any network without reconfiguration. Do not hardcode IP addresses in any configuration files.
+
 ### Software Requirements
 - Raspberry Pi OS Lite 64-bit (Bookworm)
 - SSH enabled on Pi

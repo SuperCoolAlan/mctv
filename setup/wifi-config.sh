@@ -122,37 +122,6 @@ EOF
     echo "Copy this file to the boot partition of the SD card for headless WiFi setup"
 }
 
-# Set static IP (optional)
-configure_static_ip() {
-    log_info "Configuring static IP address..."
-    
-    echo "Enter static IP address (e.g., 192.168.1.100) or press Enter to skip:"
-    read -r STATIC_IP
-    
-    if [ -z "$STATIC_IP" ]; then
-        log_info "Skipping static IP configuration"
-        return
-    fi
-    
-    echo "Enter gateway IP (e.g., 192.168.1.1):"
-    read -r GATEWAY_IP
-    
-    echo "Enter DNS servers (e.g., 8.8.8.8,8.8.4.4):"
-    read -r DNS_SERVERS
-    
-    # Configure with NetworkManager
-    if command -v nmcli &> /dev/null; then
-        nmcli connection modify "$WIFI_SSID" ipv4.method manual
-        nmcli connection modify "$WIFI_SSID" ipv4.addresses "$STATIC_IP/24"
-        nmcli connection modify "$WIFI_SSID" ipv4.gateway "$GATEWAY_IP"
-        nmcli connection modify "$WIFI_SSID" ipv4.dns "$DNS_SERVERS"
-        nmcli connection up "$WIFI_SSID"
-        
-        log_info "Static IP configured: $STATIC_IP"
-    else
-        log_warn "NetworkManager not found, static IP not configured"
-    fi
-}
 
 # Test connectivity
 test_connection() {
@@ -305,9 +274,8 @@ show_menu() {
     echo "1. Configure WiFi on remote Pi (via SSH)"
     echo "2. Generate wpa_supplicant.conf for SD card"
     echo "3. Show current configuration"
-    echo "4. Configure static IP (remote)"
-    echo "5. Test connection (remote)"
-    echo "6. Exit"
+    echo "4. Test connection (remote)"
+    echo "5. Exit"
     echo ""
     echo -n "Select an option: "
 }
@@ -349,12 +317,9 @@ main() {
                 show_config
                 ;;
             4)
-                ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" "$(declare -f configure_static_ip); configure_static_ip"
-                ;;
-            5)
                 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" "$(declare -f test_connection); $(declare -f log_info); $(declare -f log_warn); test_connection"
                 ;;
-            6)
+            5)
                 exit 0
                 ;;
             *)

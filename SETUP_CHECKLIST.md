@@ -67,7 +67,18 @@
   export KUBECONFIG=~/.kube/clusters/mctv3.yaml
   ```
 
-### 1. Cloudflare Tunnel
+### 1. Local Path Storage (Required for PVCs)
+- [ ] Deploy storage provisioner:
+  ```bash
+  cd k0s/local-path-provisioner/
+  kustomize build . | kubectl apply -f -
+  ```
+- [ ] Verify storage class is default:
+  ```bash
+  kubectl get storageclass
+  ```
+
+### 2. Cloudflare Tunnel
 - [ ] Deploy:
   ```bash
   cd k0s/cloudflare-tunnel/
@@ -79,7 +90,7 @@
   ```
 - [ ] Check logs show "Connection registered"
 
-### 2. Frigate
+### 3. Frigate
 - [ ] Deploy:
   ```bash
   cd k0s/frigate/
@@ -91,7 +102,7 @@
   ```
 - [ ] Save password to password manager
 
-### 3. Twingate (if needed)
+### 4. Twingate (if needed)
 - [ ] Deploy:
   ```bash
   cd k0s/twingate/
