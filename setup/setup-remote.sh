@@ -50,9 +50,15 @@ run_setup() {
     log_info "Target: alan@mctv3.local"
     echo ""
     
-    # Copy script to remote and execute it (to handle interactive prompts)
-    log_info "Copying setup script to remote host..."
+    # Copy scripts to remote and execute setup (to handle interactive prompts)
+    log_info "Copying setup scripts to remote host..."
     scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv3.local:/tmp/pi5-k0s-setup.sh
+    
+    # Also copy the Coral setup script for later use
+    if [ -f setup-coral-usb.sh ]; then
+        log_info "Copying Coral USB setup script..."
+        scp -i ~/.ssh/momscloset setup-coral-usb.sh alan@mctv3.local:/home/alan/setup-coral-usb.sh
+    fi
     
     # Execute the script remotely with TTY allocation for interactive prompts
     log_info "Executing setup script..."
