@@ -7,6 +7,10 @@ namespace: twingate
 resources:
   - namespace.yaml
 
+# Secrets are managed via SOPS
+generators:
+  - secrets-generator.yaml
+
 # Use Helm to generate the manifests
 helmCharts:
   - name: connector
