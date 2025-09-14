@@ -4,10 +4,10 @@ setup/.env
 
 # Cloudflare tunnel credentials and tokens
 k0s/cloudflare-tunnel/tunnel-credentials.yaml
-k0s/cloudflare-tunnel/tunnel-token-secret.yaml
+# Removed - now using SOPS encryption
 k0s/cloudflare-tunnel/tunnel-credentials-configmap.yaml
-k0s/twingate/twingate-token-secret.yaml
-k0s/frigate/frigate-auth-secret.yaml
+# Removed - now using SOPS encryption
+# Removed - now using SOPS encryption
 
 # Kubernetes configuration
 kubeconfig.yaml
@@ -49,6 +49,10 @@ setup/momscloset*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Helm charts (downloaded during kustomize build)
+k0s/*/charts/
+charts/
 
 # Large backup/image files
 *.dmg
