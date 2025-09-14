@@ -7,5 +7,8 @@ namespace: cloudflare
 resources:
   - namespace.yaml
   - tunnel-config.yaml
-  # Note: tunnel-credentials-configmap.yaml must be created from template before deployment
   - cloudflared-deployment.yaml
+
+# Secrets are managed via SOPS
+generators:
+  - secrets-generator.yaml
