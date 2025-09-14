@@ -111,6 +111,16 @@ deploy_cluster() {
     
     if [ $? -eq 0 ]; then
         log_info "Cluster deployed successfully!"
+        
+        # Remove control-plane taint for single-node cluster
+        log_info "Removing control-plane taint for single-node cluster..."
+        # Get kubeconfig temporarily to remove taint
+        k0sctl kubeconfig --config cluster.yaml > /tmp/k0s-kubeconfig.yaml
+        export KUBECONFIG=/tmp/k0s-kubeconfig.yaml
+        kubectl taint nodes --all node-role.kubernetes.io/control-plane- 2>/dev/null || true
+        rm -f /tmp/k0s-kubeconfig.yaml
+        unset KUBECONFIG
+        log_info "Node taint removed - pods can now schedule on control plane node"
     else
         log_error "Cluster deployment failed"
         exit 1

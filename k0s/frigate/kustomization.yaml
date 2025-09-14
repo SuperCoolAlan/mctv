@@ -29,6 +29,6 @@ patches:
 # ConfigMap generator removed - using direct resource instead
 configMapGenerator: []
 
-# Secrets are managed via SOPS
-generators:
-  - secrets-generator.yaml
+# Secrets generator disabled - user config should be in values-override.yaml
+# generators:
+#   - secrets-generator.yaml
