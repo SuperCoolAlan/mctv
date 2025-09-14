@@ -16,16 +16,16 @@ Frigate will be accessible at the root domain:
 ### Main Route: Frigate NVR on Root Domain
 
 Configure the hostname:
-- **Subdomain**: `@` (or leave empty for root domain)
+- **Subdomain**: `momscloset`
 - **Domain**: `asandov.com`
 - **Path**: (leave empty)
-- **Type**: `HTTP`
-- **URL**: `frigate.frigate.svc.cluster.local:5000`
+- **Type**: `HTTPS`
+- **URL**: `frigate.frigate.svc.cluster.local:8971`
 
-Advanced options (optional):
+Advanced options (required for HTTPS):
 - **HTTP Host Header**: (leave as is)
 - **Origin Server Name**: (leave as is)
-- **No TLS Verify**: Can enable if you get TLS errors
+- **No TLS Verify**: **Enable this** (required for self-signed certificates)
 
 ## DNS Configuration
 
@@ -34,12 +34,11 @@ The tunnel should automatically create the necessary DNS records. Verify in your
 1. Go to your domain in Cloudflare dashboard
 2. Click on **DNS** → **Records**
 3. You should see CNAME records:
-   - `frigate.momscloset` → `<tunnel-id>.cfargotunnel.com`
-   - `momscloset` → `<tunnel-id>.cfargotunnel.com` (if using root)
+   - `momscloset` → `<tunnel-id>.cfargotunnel.com`
 
 If not automatically created, add manually:
 - **Type**: `CNAME`
-- **Name**: `frigate.momscloset`
+- **Name**: `momscloset`
 - **Target**: `<your-tunnel-id>.cfargotunnel.com`
 - **Proxy status**: Proxied (orange cloud ON)
 
@@ -61,7 +60,7 @@ Examples:
 For home security cameras, consider adding Cloudflare Access:
 
 1. In Zero Trust dashboard, go to **Access** → **Applications**
-2. Add an application for `frigate.momscloset.asandov.com`
+2. Add an application for `momscloset.asandov.com`
 3. Set up authentication (options):
    - Email OTP (one-time password)
    - Google/GitHub OAuth
@@ -75,9 +74,9 @@ Once configured, test access:
 
 ```bash
 # From outside your network
-curl -I https://frigate.momscloset.asandov.com
+curl -I https://momscloset.asandov.com
 
-# Should return HTTP 200 or redirect to login if Access is configured
+# Should return HTTP 200 or Frigate's login page
 ```
 
 ## Troubleshooting
@@ -87,7 +86,7 @@ If you can't access the site:
 1. Check tunnel health in Cloudflare dashboard
 2. Verify DNS propagation:
    ```bash
-   nslookup frigate.momscloset.asandov.com
+   nslookup momscloset.asandov.com
    ```
 3. Check tunnel logs:
    ```bash

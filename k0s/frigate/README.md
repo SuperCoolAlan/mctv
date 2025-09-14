@@ -14,18 +14,23 @@ This directory contains the Kustomize configuration for deploying Frigate NVR on
 - `kustomization.yaml` - Main Kustomize configuration that references the Helm chart
 - `values-override.yaml` - Custom values that override the Helm chart defaults
 - `namespace.yaml` - Creates the frigate namespace
-- `helm/frigate/` - Local copy of the Frigate Helm chart
+- `coral-usb-patch.yaml` - Patch for Coral USB device support
 
 ## Configuration
 
-### 1. Update Ingress Settings
+### 1. Authentication Configuration
 
-Edit `values-override.yaml` to configure your ingress:
+Frigate has authentication enabled by default in `values-override.yaml`:
 
 ```yaml
-ingress:
-  hosts:
-    - host: frigate.mctv3.local  # Change to your domain
+auth:
+  enabled: true
+  reset_admin_password: true
+```
+
+On first deployment, check logs for the generated admin password:
+```bash
+kubectl logs -n frigate deployment/frigate | grep "admin password"
 ```
 
 ### 2. Configure Storage
@@ -63,10 +68,10 @@ config: |
 kubectl kustomize k0s/frigate/
 
 # Deploy to cluster
-kubectl apply -k k0s/frigate/
+kustomize build --enable-exec --enable-alpha-plugins k0s/frigate/ | kubectl apply -f -
 
-# Or use kustomize directly
-kustomize build k0s/frigate/ | kubectl apply -f -
+# Or use kustomize with KSOPS for secrets
+kustomize build --enable-exec --enable-alpha-plugins k0s/frigate/ | kubectl apply -f -
 ```
 
 ### Verify Deployment
@@ -87,8 +92,12 @@ kubectl logs -n frigate deployment/frigate
 
 ### Access Frigate
 
-If ingress is configured:
-- http://frigate.mctv3.local (or your configured hostname)
+Through Cloudflare Tunnel:
+- https://momscloset.asandov.com (with authentication)
+
+The service is exposed on two ports:
+- Port 5000: HTTP without authentication (internal use only)
+- Port 8971: HTTPS with authentication (used by Cloudflare tunnel)
 
 For local testing without ingress:
 ```bash
@@ -96,20 +105,12 @@ kubectl port-forward -n frigate svc/frigate 5000:5000
 # Access at http://localhost:5000
 ```
 
-## Installing Ingress Controller (if needed)
+## External Access via Cloudflare Tunnel
 
-If you don't have an ingress controller installed:
-
-```bash
-# Install NGINX Ingress Controller
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.2/deploy/static/provider/baremetal/deploy.yaml
-
-# Wait for it to be ready
-kubectl wait --namespace ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=120s
-```
+Frigate is exposed through Cloudflare Tunnel configured in the Zero Trust dashboard:
+- No ingress controller needed
+- Automatic HTTPS with Cloudflare certificates
+- Authentication handled by Frigate on port 8971
 
 ## Updating Configuration
 
@@ -118,7 +119,7 @@ To update Frigate configuration:
 1. Edit `values-override.yaml`
 2. Apply changes:
    ```bash
-   kubectl apply -k k0s/frigate/
+   kustomize build --enable-exec --enable-alpha-plugins k0s/frigate/ | kubectl apply -f -
    ```
 
 ## Uninstall
@@ -134,10 +135,15 @@ kubectl delete -k k0s/frigate/
 - Check events: `kubectl get events -n frigate`
 - Verify storage class exists: `kubectl get storageclass`
 
-### Can't access via ingress
-- Verify ingress controller is running: `kubectl get pods -n ingress-nginx`
-- Check ingress resource: `kubectl describe ingress -n frigate`
-- Add hostname to /etc/hosts: `echo "10.0.1.16 frigate.mctv3.local" | sudo tee -a /etc/hosts`
+### Can't access via Cloudflare tunnel
+- Verify tunnel is connected: Check Cloudflare Zero Trust dashboard
+- Ensure route is configured for `https://frigate.frigate.svc.cluster.local:8971`
+- Enable "No TLS Verify" in tunnel configuration for self-signed certificates
+- Check cloudflared logs: `kubectl logs -n cloudflare deployment/cloudflared`
+
+### Authentication issues
+- Default credentials: username `admin`, password from logs
+- To reset: set `reset_admin_password: true` and redeploy
 
 ### Performance issues on Raspberry Pi
 - Reduce detection fps in camera config

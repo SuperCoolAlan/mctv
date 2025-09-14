@@ -25,10 +25,11 @@ Since you're using the token-based tunnel, you need to configure routes in the C
 3. Find your tunnel (connected status should show green)
 4. Click **Configure** → **Public Hostname**
 5. Add a public hostname:
-   - **Subdomain**: `frigate` (or your choice)
-   - **Domain**: Select your domain
-   - **Type**: `HTTP`
-   - **URL**: `frigate.frigate.svc.cluster.local:5000`
+   - **Subdomain**: `momscloset`
+   - **Domain**: `asandov.com`
+   - **Type**: `HTTPS`
+   - **URL**: `frigate.frigate.svc.cluster.local:8971`
+   - **Additional Settings**: Enable "No TLS Verify"
 
 ## Service Discovery
 
@@ -50,14 +51,14 @@ To expose additional services through the tunnel:
 ## Example Services
 
 ```yaml
-# Frigate NVR
-frigate.yourdomain.com → frigate.frigate.svc.cluster.local:5000
+# Frigate NVR (with authentication)
+momscloset.asandov.com → frigate.frigate.svc.cluster.local:8971
 
 # Home Assistant (if you add it)
-ha.yourdomain.com → home-assistant.default.svc.cluster.local:8123
+ha.asandov.com → home-assistant.default.svc.cluster.local:8123
 
 # Grafana (if you add it)
-grafana.yourdomain.com → grafana.monitoring.svc.cluster.local:3000
+grafana.asandov.com → grafana.monitoring.svc.cluster.local:3000
 ```
 
 ## Advantages
@@ -95,6 +96,7 @@ In Cloudflare Zero Trust dashboard, you can add:
    ```bash
    kubectl run test --rm -it --image=busybox --restart=Never -- wget -O- http://frigate.frigate.svc.cluster.local:5000
    ```
+   Note: Port 5000 is unauthenticated; port 8971 requires HTTPS and auth
 
 4. Check Cloudflare dashboard:
    - Tunnel shows as "Healthy"
@@ -121,4 +123,4 @@ Frigate uses WebSockets for live view. Cloudflare Tunnel handles this automatica
 
 3. Configure route in Cloudflare dashboard
 
-4. Access via: `https://frigate.yourdomain.com`
+4. Access via: `https://momscloset.asandov.com`

@@ -29,46 +29,35 @@ Cloudflare Tunnel creates an outbound-only connection from your cluster to Cloud
 6. Save the tunnel
 7. **IMPORTANT**: Download and save the credentials JSON file
 
-### 2. Configure the Tunnel
+### 2. Configure the Tunnel with Token Authentication
 
-1. Copy the credentials template:
+1. In the Cloudflare Zero Trust Dashboard, after creating your tunnel:
+   - Click on your tunnel name
+   - Go to the **Configure** tab
+   - Copy the **token** from the installation command
+
+2. Create the token secret (already encrypted with SOPS):
    ```bash
-   cp k0s/cloudflare-tunnel/tunnel-credentials-template.yaml k0s/cloudflare-tunnel/tunnel-credentials.yaml
+   # The token is stored in secrets/tunnel-token-secret.enc.yaml
+   # To view/edit the encrypted token:
+   sops secrets/tunnel-token-secret.enc.yaml
    ```
 
-2. Edit `tunnel-credentials.yaml` and paste your credentials JSON:
-   ```yaml
-   stringData:
-     credentials.json: |
-       {
-         "AccountTag": "your-account-id",
-         "TunnelSecret": "your-tunnel-secret",
-         "TunnelID": "your-tunnel-id"
-       }
-   ```
+3. Configure routes in Cloudflare Dashboard:
+   - Click **Public Hostname** tab
+   - Add your services (e.g., Frigate):
+     - Subdomain: `momscloset` (or your choice)
+     - Domain: `asandov.com`
+     - Service: `https://frigate.frigate.svc.cluster.local:8971`
+     - Additional settings: Enable "No TLS Verify"
 
-3. Edit `values-override.yaml`:
-   - Set your `tunnelName` and `tunnelId`
-   - Configure your hostnames and services
-   - Example for Frigate:
-     ```yaml
-     ingress:
-       - hostname: "frigate.yourdomain.com"
-         service: "http://frigate.frigate.svc.cluster.local:5000"
-     ```
-
-### 3. Add to .gitignore
-
-Add the credentials file to .gitignore:
-```bash
-echo "k0s/cloudflare-tunnel/tunnel-credentials.yaml" >> .gitignore
-```
+**Note**: When using token authentication, all routing configuration is done in the Cloudflare dashboard, not in local config files.
 
 ### 4. Deploy
 
 ```bash
-# Set kubeconfig - This deployment uses the mctv3-k0s context
-export KUBECONFIG=~/.kube/clusters/mctv3-k0s.yaml
+# Set kubeconfig - This deployment uses the mctv3 context
+export KUBECONFIG=~/.kube/clusters/mctv3.yaml
 
 # Deploy using kustomize with KSOPS for secret management
 kustomize build --enable-exec --enable-alpha-plugins . | kubectl apply -f -
