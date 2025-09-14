@@ -87,6 +87,61 @@ install_dependencies() {
     fi
 }
 
+# Function to install Edge TPU runtime at reduced frequency
+install_edgetpu_runtime() {
+    echo ""
+    echo "Installing Edge TPU runtime (reduced frequency for safety)..."
+    
+    # Check if we're on Raspberry Pi OS / Debian
+    if [ ! -f /etc/debian_version ]; then
+        echo "⚠ Not running Debian/Raspberry Pi OS, skipping Edge TPU runtime installation"
+        echo "  Please install the Edge TPU runtime manually for your OS"
+        return
+    fi
+    
+    # Check if runtime is already installed
+    if dpkg -l | grep -q libedgetpu1-std; then
+        echo "✓ Edge TPU runtime (standard/reduced frequency) already installed"
+        return
+    elif dpkg -l | grep -q libedgetpu1-max; then
+        echo "⚠ Edge TPU runtime (maximum frequency) is installed"
+        echo "  This runs at full power and can get very hot!"
+        echo "  To switch to reduced frequency for safety:"
+        echo "    sudo apt-get remove libedgetpu1-max"
+        echo "    sudo apt-get install libedgetpu1-std"
+        read -p "Continue with current runtime? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+        return
+    fi
+    
+    # Add Coral repository if not already added
+    if [ ! -f /etc/apt/sources.list.d/coral-edgetpu.list ]; then
+        echo "Adding Coral repository..."
+        echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+        
+        # Add repository key
+        curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+        
+        # Update package list
+        sudo apt-get update
+    fi
+    
+    # Install Edge TPU runtime (standard = reduced frequency)
+    echo "Installing Edge TPU runtime at reduced frequency..."
+    sudo apt-get install -y libedgetpu1-std
+    
+    echo "✓ Edge TPU runtime installed (reduced frequency mode)"
+    echo ""
+    echo "ℹ️  The runtime is configured for reduced frequency operation:"
+    echo "   - Runs at half the maximum frequency"
+    echo "   - Lower power consumption"
+    echo "   - Safer temperature (won't get as hot)"
+    echo "   - Still provides good performance for most use cases"
+}
+
 # Function to test Coral access
 test_coral_access() {
     echo ""
@@ -131,7 +186,8 @@ main() {
     echo "  1. Detect Coral USB device (if connected)"
     echo "  2. Install udev rules for proper permissions"
     echo "  3. Install required dependencies"
-    echo "  4. Test device access"
+    echo "  4. Install Edge TPU runtime (reduced frequency for safety)"
+    echo "  5. Test device access"
     echo ""
     
     # Detect Coral USB device
@@ -143,6 +199,9 @@ main() {
     
     # Install dependencies
     install_dependencies
+    
+    # Install Edge TPU runtime
+    install_edgetpu_runtime
     
     # Test access if Coral was detected
     if [ $CORAL_DETECTED -eq 0 ]; then
@@ -167,12 +226,21 @@ main() {
     
     echo ""
     echo "The system is now ready for Coral USB support."
+    echo "Edge TPU runtime is configured for reduced frequency (safer operation)."
     echo "When you deploy Frigate with Kubernetes, it will be able to access the Coral."
     echo ""
     echo "Next steps:"
     echo "  1. If Coral wasn't detected, plug it in and run: lsusb | grep -i coral"
-    echo "  2. Continue with k0s installation if not already done"
-    echo "  3. Deploy Frigate with Coral support using the manifests in k0s/frigate/"
+    echo "  2. After plugging in Coral, it may need to be unplugged and replugged"
+    echo "     to apply the new runtime settings"
+    echo "  3. Continue with k0s installation if not already done"
+    echo "  4. Deploy Frigate with Coral support using the manifests in k0s/frigate/"
+    echo ""
+    echo "Runtime Information:"
+    echo "  - Installed: libedgetpu1-std (reduced frequency)"
+    echo "  - Power: ~2W (vs ~4W at max frequency)"
+    echo "  - Temperature: Runs cooler and safer"
+    echo "  - Performance: Still excellent for object detection"
 }
 
 # Run main function

@@ -12,20 +12,35 @@ The Coral USB TPU is not currently detected by the Raspberry Pi. The device was 
    usb 2-1: USB disconnect, device number 7
    ```
 
-2. **Power Issues**: The Coral USB can draw up to 900mA, which may exceed the Raspberry Pi's USB power capacity.
+2. **Power Issues**: The Coral USB power consumption varies by runtime:
+   - **Maximum frequency (libedgetpu1-max)**: ~4W (up to 900mA at 5V)
+   - **Reduced frequency (libedgetpu1-std)**: ~2W (up to 500mA at 5V)
+   
+   The Raspberry Pi may struggle to provide adequate power, especially at maximum frequency.
 
 ## Recommended Solutions
 
-### Option 1: Powered USB Hub (Recommended)
-Connect the Coral USB through a powered USB 3.0 hub to ensure adequate power delivery.
+### Option 1: Check Edge TPU Runtime Frequency
+The Coral may be running at maximum frequency (4W power draw). Switch to reduced frequency:
+```bash
+# Check current runtime
+dpkg -l | grep libedgetpu
 
-### Option 2: Check Physical Connection
+# If libedgetpu1-max is installed, switch to standard (reduced frequency)
+sudo apt-get remove libedgetpu1-max
+sudo apt-get install libedgetpu1-std
+```
+
+### Option 2: Powered USB Hub (Recommended)
+Connect the Coral USB through a powered USB 3.0 hub to ensure adequate power delivery, especially if running at maximum frequency.
+
+### Option 3: Check Physical Connection
 1. Unplug the Coral USB device
 2. Wait 10 seconds
 3. Plug it back in firmly
 4. Check dmesg: `dmesg | grep -E "(usb|coral|18d1)"`
 
-### Option 3: USB Port Selection
+### Option 4: USB Port Selection
 Try different USB ports on the Raspberry Pi. USB 3.0 ports (blue) typically provide more power.
 
 ## Verification Steps
