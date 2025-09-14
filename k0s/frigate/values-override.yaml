@@ -37,22 +37,23 @@ config: |
   # Authentication configuration
   auth:
     enabled: true
-    reset_admin_password: true  # This will reset the admin password on next startup
+    reset_admin_password: false  # Password reset disabled
   
   mqtt:
     enabled: false  # Disable MQTT if not using Home Assistant
   
   # Detectors configuration
   detectors:
-    # Coral TPU detector (commented out until hardware is available)
+    # Coral TPU detector (temporarily disabled due to connectivity issues)
     # coral:
     #   type: edgetpu
     #   device: usb
+    # CPU detector
     cpu1:
       type: cpu
       num_threads: 2
   
-  # Model configuration for EdgeTPU (commented out until hardware is available)
+  # Model configuration for EdgeTPU (commented out while Coral is disabled)
   # model:
   #   path: /edgetpu_model.tflite
   #   width: 320

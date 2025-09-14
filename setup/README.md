@@ -44,6 +44,13 @@ Backup and disaster recovery tool.
 - Provides restoration procedures
 - Generates recovery documentation
 
+### 6. `setup-coral-usb.sh`
+Prepares the system for Google Coral USB TPU support.
+- Installs udev rules for proper device permissions
+- Configures USB access for containers
+- Verifies Coral device detection
+- **Note:** Run this before deploying Frigate if using Coral for object detection
+
 ## Quick Start
 
 ### Initial Setup
