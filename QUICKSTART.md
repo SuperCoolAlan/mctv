@@ -7,7 +7,7 @@
    - Username: `alan`
    - SSH enabled
 3. SSH key at `~/.ssh/momscloset`
-4. Coral USB Accelerator (plug in after setup)
+4. Coral USB Accelerator plugged into Pi
 
 ## Installation
 

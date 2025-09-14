@@ -9,6 +9,9 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Global auto-confirm flag
+AUTO_CONFIRM=false
+
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -26,10 +29,14 @@ check_pi() {
     if [ -f /proc/cpuinfo ] && grep -q "Raspberry Pi 5" /proc/cpuinfo; then
         log_info "Detected Raspberry Pi 5"
     else
-        log_warn "This doesn't appear to be a Raspberry Pi 5. Continue anyway? (y/n)"
-        read -r response
-        if [ "$response" != "y" ]; then
-            exit 1
+        if [ "$AUTO_CONFIRM" != "true" ]; then
+            log_warn "This doesn't appear to be a Raspberry Pi 5. Continue anyway? (y/n)"
+            read -r response
+            if [ "$response" != "y" ]; then
+                exit 1
+            fi
+        else
+            log_warn "This doesn't appear to be a Raspberry Pi 5. Continuing anyway (auto-confirm)..."
         fi
     fi
 }
@@ -83,10 +90,14 @@ install_k0s() {
     if command -v k0s &> /dev/null; then
         CURRENT_VERSION=$(k0s version)
         log_info "k0s is already installed. Version: $CURRENT_VERSION"
-        echo "Do you want to reinstall/update? (y/n)"
-        read -r response
-        if [ "$response" != "y" ]; then
-            return 0
+        if [ "$AUTO_CONFIRM" != "true" ]; then
+            echo "Do you want to reinstall/update? (y/n)"
+            read -r response
+            if [ "$response" != "y" ]; then
+                return 0
+            fi
+        else
+            log_info "Auto-confirming k0s reinstall/update..."
         fi
     fi
     
@@ -147,8 +158,10 @@ setup_ssh() {
     echo ""
     echo "This will enable passwordless SSH access for k0sctl deployment."
     echo ""
-    echo "Press Enter to continue..."
-    read -r
+    if [ "$AUTO_CONFIRM" != "true" ]; then
+        echo "Press Enter to continue..."
+        read -r
+    fi
 }
 
 # Display next steps
@@ -186,11 +199,16 @@ show_next_steps() {
     echo ""
     
     if [ "$NEEDS_REBOOT" = true ]; then
-        echo "Reboot now? (y/n)"
-        read -r response
-        if [ "$response" = "y" ]; then
-            reboot
+        if [ "$AUTO_CONFIRM" != "true" ]; then
+            echo "Reboot now? (y/n)"
+            read -r response
+            if [ "$response" = "y" ]; then
+                reboot
+            else
+                log_warn "Please remember to reboot before deploying k0s!"
+            fi
         else
+            log_warn "System needs reboot. Auto-confirming NO to allow script to continue."
             log_warn "Please remember to reboot before deploying k0s!"
         fi
     fi
@@ -208,10 +226,17 @@ main() {
     echo "3. Configure system settings"
     echo "4. Prepare for k0sctl deployment"
     echo ""
-    echo "Continue? (y/n)"
-    read -r response
-    if [ "$response" != "y" ]; then
-        exit 0
+
+    # Check for auto-confirm flag
+    if [ "$1" == "-y" ] || [ "$1" == "--yes" ]; then
+        AUTO_CONFIRM=true
+        log_info "Auto-confirming setup..."
+    else
+        echo "Continue? (y/n)"
+        read -r response
+        if [ "$response" != "y" ]; then
+            exit 0
+        fi
     fi
     
     check_pi

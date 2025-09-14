@@ -34,7 +34,7 @@ check_prereq() {
     fi
     
     # Test SSH connection
-    if ! ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv3.local "echo 'Connected'" &>/dev/null; then
+    if ! ssh -i ~/.ssh/momscloset -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new alan@mctv3.local "echo 'Connected'" &>/dev/null; then
         log_error "Cannot connect to alan@mctv3.local"
         echo "Please ensure:"
         echo "1. Raspberry Pi is powered on"
@@ -49,10 +49,15 @@ run_setup() {
     log_info "Running k0s setup on Raspberry Pi 5..."
     log_info "Target: alan@mctv3.local"
     echo ""
-    
-    # Copy scripts to remote and execute setup (to handle interactive prompts)
+
+    # Copy scripts to remote and execute setup
     log_info "Copying setup scripts to remote host..."
-    scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv3.local:/tmp/pi5-k0s-setup.sh
+    if [ "$1" == "-y" ] || [ "$1" == "--yes" ]; then
+        # Copy the auto version for non-interactive mode
+        scp -i ~/.ssh/momscloset pi5-k0s-setup-auto.sh alan@mctv3.local:/tmp/pi5-k0s-setup.sh
+    else
+        scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv3.local:/tmp/pi5-k0s-setup.sh
+    fi
     
     # Also copy the Coral setup script for later use
     if [ -f setup-coral-usb.sh ]; then
@@ -66,9 +71,15 @@ run_setup() {
         scp -i ~/.ssh/momscloset ensure-dynamic-ip.sh alan@mctv3.local:/home/alan/ensure-dynamic-ip.sh
     fi
     
-    # Execute the script remotely with TTY allocation for interactive prompts
+    # Execute the script remotely
     log_info "Executing setup script..."
-    ssh -tt -i ~/.ssh/momscloset alan@mctv3.local "sudo bash /tmp/pi5-k0s-setup.sh"
+    if [ "$1" == "-y" ] || [ "$1" == "--yes" ]; then
+        # Auto mode uses the non-interactive script
+        ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo bash /tmp/pi5-k0s-setup.sh"
+    else
+        # Interactive mode needs TTY
+        ssh -tt -i ~/.ssh/momscloset alan@mctv3.local "sudo bash /tmp/pi5-k0s-setup.sh"
+    fi
     
     if [ $? -eq 0 ]; then
         log_info "Setup completed successfully!"
@@ -87,15 +98,20 @@ main() {
     echo "This will copy and run the setup script on the Pi."
     echo "Target: alan@mctv3.local"
     echo ""
-    echo "Continue? (y/n)"
-    read -r response
-    
-    if [ "$response" != "y" ]; then
-        exit 0
+    # Check for auto-confirm flag
+    if [ "$1" != "-y" ] && [ "$1" != "--yes" ]; then
+        echo "Continue? (y/n)"
+        read -r response
+
+        if [ "$response" != "y" ]; then
+            exit 0
+        fi
+    else
+        log_info "Auto-confirming remote setup..."
     fi
-    
+
     check_prereq
-    run_setup
+    run_setup "$1"
     
     echo ""
     log_warn "If the Pi rebooted for cgroup changes, wait for it to come back online."

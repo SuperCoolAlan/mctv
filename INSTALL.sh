@@ -38,6 +38,28 @@ check_prerequisites() {
     log_info "All prerequisites met"
 }
 
+# Wait for Pi to come back online
+wait_for_pi() {
+    log_info "Waiting for Pi to come back online..."
+    for i in {1..60}; do
+        if ping -c 1 -W 1 mctv3.local > /dev/null 2>&1; then
+            log_info "Pi is responding to ping, waiting for SSH..."
+            sleep 10
+            for j in {1..30}; do
+                if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv3.local "echo 'SSH is ready'" &>/dev/null; then
+                    log_info "Pi is back online and SSH is ready!"
+                    return 0
+                fi
+                sleep 2
+            done
+        fi
+        echo -n "."
+        sleep 2
+    done
+    log_error "Pi did not come back online after 2 minutes"
+    return 1
+}
+
 # Phase 1: Initial Pi Setup
 phase1_pi_setup() {
     log_step "Phase 1: Initial Raspberry Pi Setup"
@@ -46,12 +68,34 @@ phase1_pi_setup() {
 
     # Remove old SSH key if exists
     ssh-keygen -R mctv3.local 2>/dev/null || true
+    ssh-keygen -R 10.0.1.16 2>/dev/null || true
+
+    # Add new SSH key
+    ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/momscloset alan@mctv3.local "echo 'SSH key accepted'" || true
 
     # Run remote setup
     log_info "Running initial Pi setup (will configure cgroups, install dependencies)..."
-    ./setup-remote.sh
+    # Pass -y flag if we're in auto mode
+    if [ "$AUTO_MODE" == "true" ]; then
+        ./setup-remote.sh -y
+    else
+        ./setup-remote.sh
+    fi
 
     cd ..
+
+    # Check if Pi needs reboot after setup
+    log_info "Checking if cgroups are active..."
+    if ! ssh -i ~/.ssh/momscloset alan@mctv3.local "[ -d /sys/fs/cgroup/memory ] && [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]" 2>/dev/null; then
+        log_warn "Pi needs reboot for cgroups to be active. Rebooting now..."
+        ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo reboot" 2>/dev/null || true
+        sleep 5
+        wait_for_pi
+    else
+        log_info "Cgroups are already active, no reboot needed"
+    fi
+
+    log_info "Initial Pi setup completed successfully!"
 }
 
 # Phase 2: Deploy k0s with dynamic IP support
@@ -66,14 +110,32 @@ phase2_deploy_k0s() {
 
     cd ..
 
+    # Wait for cluster to stabilize
+    log_info "Waiting for cluster to stabilize..."
+    sleep 30
+
     # Verify cluster
     export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+    local retries=5
+    while [ $retries -gt 0 ]; do
+        if kubectl get nodes 2>/dev/null | grep -q Ready; then
+            break
+        fi
+        log_info "Waiting for cluster to be ready... ($retries attempts left)"
+        sleep 10
+        retries=$((retries - 1))
+    done
+
     if ! kubectl get nodes | grep -q Ready; then
-        log_error "Cluster not ready!"
+        log_error "Cluster not ready after waiting!"
         exit 1
     fi
 
     log_info "k0s cluster deployed successfully"
+
+    # Ensure taint is removed for single-node cluster
+    log_info "Ensuring control-plane taint is removed..."
+    kubectl taint nodes --all node-role.kubernetes.io/control-plane- 2>/dev/null || log_info "Taint already removed"
 }
 
 # Phase 3: Deploy storage and services
@@ -140,6 +202,13 @@ main() {
 
     check_prerequisites
 
+    # Check for auto mode
+    AUTO_MODE=false
+    if [ "$1" == "-y" ] || [ "$1" == "--yes" ]; then
+        AUTO_MODE=true
+        log_info "Running in auto-confirm mode"
+    fi
+
     # Ask for confirmation
     echo ""
     log_warn "This will:"
@@ -148,18 +217,17 @@ main() {
     echo "  3. Deploy all services (storage, Cloudflare, Frigate, Twingate)"
     echo "  4. Configure Frigate with Coral TPU support"
     echo ""
-    read -p "Continue? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 0
+
+    if [ "$AUTO_MODE" != "true" ]; then
+        read -p "Continue? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 0
+        fi
     fi
 
     # Run phases
     phase1_pi_setup
-
-    log_warn "If Pi rebooted for cgroups, wait for it to come back and run this script again!"
-    read -p "Press Enter when Pi is ready..."
-
     phase2_deploy_k0s
     phase3_deploy_services
     phase4_verify
