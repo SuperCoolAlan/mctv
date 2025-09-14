@@ -67,18 +67,17 @@ echo "k0s/cloudflare-tunnel/tunnel-credentials.yaml" >> .gitignore
 ### 4. Deploy
 
 ```bash
-# Set kubeconfig
-export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+# Set kubeconfig - This deployment uses the mctv3-k0s context
+export KUBECONFIG=~/.kube/clusters/mctv3-k0s.yaml
 
-# Create the secret first
-kubectl apply -f k0s/cloudflare-tunnel/tunnel-credentials.yaml
-
-# Deploy the tunnel
-kubectl apply -k k0s/cloudflare-tunnel/
+# Deploy using kustomize with KSOPS for secret management
+kustomize build --enable-exec --enable-alpha-plugins . | kubectl apply -f -
 
 # Or preview first
-kubectl kustomize k0s/cloudflare-tunnel/
+kustomize build --enable-exec --enable-alpha-plugins .
 ```
+
+**Note**: This deployment follows the secrets management practices defined in [homelab-manifests/CLAUDE.md](/Users/alan/Documents/homelab-manifests/CLAUDE.md) using SOPS encryption with KSOPS.
 
 ### 5. Configure DNS
 

@@ -5,9 +5,10 @@ namespace: cloudflare
 
 # Create the namespace, config, and deployment
 resources:
-  - namespace.yaml
-  - tunnel-config.yaml
-  - cloudflared-deployment.yaml
+  - resources/namespace.yaml
+  - resources/tunnel-config.yaml
+  - resources/tunnel-credentials-dummy.yaml
+  - resources/cloudflared-deployment.yaml
 
 # Secrets are managed via SOPS
 generators:

@@ -9,14 +9,20 @@ data:
     credentials-file: /etc/cloudflared/creds/credentials.json
     
     # Ingress rules for routing
+    # NOTE: Add all service routing rules here. Each service that needs external
+    # access through Cloudflare tunnel should have an entry below.
     ingress:
-      # Route momscloset.asandov.com to Frigate (authenticated interface)
+      # Frigate NVR - Camera system
       - hostname: momscloset.asandov.com
         service: http://frigate.frigate.svc.cluster.local:8971
         originRequest:
           connectTimeout: 30s
           tcpKeepAlive: 30s
           keepAliveTimeout: 90s
+      
+      # Add more services here as needed:
+      # - hostname: service.asandov.com
+      #   service: http://service.namespace.svc.cluster.local:port
       
       # Catch-all rule (required) - returns 404 for unmatched requests  
       - service: http_status:404

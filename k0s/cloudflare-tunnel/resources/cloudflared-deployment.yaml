@@ -19,14 +19,16 @@ spec:
         args:
         - tunnel
         - --no-autoupdate
-        - --config
-        - /etc/cloudflared/config/config.yaml
         - run
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: tunnel-token
+              key: token
         volumeMounts:
         - name: config
           mountPath: /etc/cloudflared/config
-        - name: credentials
-          mountPath: /etc/cloudflared/creds
         resources:
           limits:
             cpu: "200m"
@@ -45,6 +47,3 @@ spec:
       - name: config
         configMap:
           name: cloudflared-config
-      - name: credentials
-        configMap:
-          name: cloudflared-credentials
