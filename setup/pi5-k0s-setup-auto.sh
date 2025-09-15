@@ -198,6 +198,17 @@ configure_system() {
     echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.d/99-k0s.conf
     sysctl -p /etc/sysctl.d/99-k0s.conf
 
+    # Configure WiFi to be ready for remote access
+    log_info "Configuring WiFi..."
+    # Unblock WiFi if blocked
+    rfkill unblock wifi 2>/dev/null || true
+    # Set WiFi country code
+    raspi-config nonint do_wifi_country US 2>/dev/null || true
+    # Bring up WiFi interface
+    ip link set wlan0 up 2>/dev/null || true
+    # Restart NetworkManager to ensure WiFi is available
+    systemctl restart NetworkManager 2>/dev/null || true
+
     # Load required kernel modules
     log_info "Loading required kernel modules..."
     modprobe br_netfilter
