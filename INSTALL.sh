@@ -73,6 +73,19 @@ phase1_pi_setup() {
     # Add new SSH key
     ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/momscloset alan@mctv3.local "echo 'SSH key accepted'" || true
 
+    # Check if dpkg is locked (fresh boot updates)
+    log_info "Checking if system updates are running..."
+    local max_wait=60
+    local waited=0
+    while ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo lsof /var/lib/dpkg/lock-frontend 2>/dev/null | grep -q dpkg" && [ $waited -lt $max_wait ]; do
+        log_warn "System is running automatic updates, waiting... ($waited/$max_wait seconds)"
+        sleep 10
+        waited=$((waited + 10))
+    done
+    if [ $waited -ge $max_wait ]; then
+        log_warn "System updates still running after $max_wait seconds, proceeding anyway"
+    fi
+
     # Configure WiFi FIRST so it works after reboot
     log_info "Configuring WiFi for deployment..."
     if [ -f .env ]; then
