@@ -5,6 +5,7 @@ namespace: local-path-storage
 
 resources:
   - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.30/deploy/local-path-storage.yaml
+  - frigate-storage-class.yaml
 
 patches:
   - target:
@@ -15,3 +16,7 @@ patches:
         path: /metadata/annotations
         value:
           storageclass.kubernetes.io/is-default-class: "true"
+  - path: configmap-patch.yaml
+    target:
+      kind: ConfigMap
+      name: local-path-config

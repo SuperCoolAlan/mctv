@@ -6,6 +6,7 @@ namespace: frigate
 # Create the namespace
 resources:
   - namespace.yaml
+  - pvcs.yaml
 
 # Use Helm to generate the manifests
 helmCharts:
@@ -19,9 +20,13 @@ helmCharts:
     # valuesInline:
     #   key: value
 
-# Patches for Coral USB support
+# Patches for Coral USB support and environment secrets
 patches:
   - path: coral-usb-patch.yaml
+    target:
+      kind: Deployment
+      name: frigate
+  - path: env-secrets-patch.yaml
     target:
       kind: Deployment
       name: frigate
@@ -29,6 +34,6 @@ patches:
 # ConfigMap generator removed - using direct resource instead
 configMapGenerator: []
 
-# Secrets generator disabled - user config should be in values-override.yaml
-# generators:
-#   - secrets-generator.yaml
+# Secrets generator for encrypted credentials
+generators:
+  - secrets-generator.yaml

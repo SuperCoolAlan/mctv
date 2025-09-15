@@ -45,3 +45,8 @@ spec:
         
         telemetry:
           enabled: false
+
+        workerProfiles:
+        - name: default
+          values:
+            taints: []
