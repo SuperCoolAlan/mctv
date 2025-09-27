@@ -7,6 +7,8 @@ namespace: frigate
 resources:
   - namespace.yaml
   - pvcs.yaml
+  - nginx-proxy-configmap.yaml
+  - nginx-proxy-deployment.yaml
 
 # Use Helm to generate the manifests
 helmCharts:

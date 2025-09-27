@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-proxy-config
+  namespace: frigate
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # Logging
+        access_log /var/log/nginx/access.log;
+
+        # Performance
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+
+        # Enable substitution
+        sub_filter_once off;
+        sub_filter_types text/html;
+
+        server {
+            listen 8080;
+
+            # Proxy to Frigate
+            location / {
+                proxy_pass https://frigate.frigate.svc.cluster.local:8971;
+                proxy_ssl_verify off;
+
+                # Forward headers
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+                proxy_set_header X-Forwarded-Host $host;
+
+                # WebSocket support
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+
+                # Buffering for substitution
+                proxy_buffering on;
+                proxy_buffer_size 128k;
+                proxy_buffers 8 128k;
+                proxy_busy_buffers_size 256k;
+                proxy_max_temp_file_size 1024m;
+
+                # Remove Cloudflare beacon script completely
+                sub_filter '<script defer src="https://static.cloudflareinsights.com/beacon.min.js/' '<!-- Cloudflare beacon removed --><script data-removed="';
+                sub_filter '" integrity=' '" data-integrity=';
+                sub_filter '" crossorigin="anonymous"></script>' '"></script><!--removed-->';
+
+                # Also remove inline Cloudflare scripts
+                sub_filter 'window._cf_' '//window._cf_';
+
+                # Fix CSP headers to allow everything
+                proxy_hide_header Content-Security-Policy;
+                proxy_hide_header X-Content-Security-Policy;
+                add_header Content-Security-Policy "default-src * 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';" always;
+
+                # Remove restrictive headers
+                proxy_hide_header Cross-Origin-Embedder-Policy;
+                proxy_hide_header Cross-Origin-Resource-Policy;
+                proxy_hide_header Cross-Origin-Opener-Policy;
+                proxy_hide_header X-Frame-Options;
+                proxy_hide_header X-Content-Type-Options;
+            }
+        }
+    }
