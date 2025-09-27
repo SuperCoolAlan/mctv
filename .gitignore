@@ -62,3 +62,7 @@ charts/
 *.img
 *.gz
 *.iso
+
+# Generated manifest files from kustomize build
+*-manifest.yaml
+k0s/**/*-manifest.yaml
