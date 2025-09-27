@@ -5,10 +5,10 @@ namespace: frigate
 
 # Create the namespace
 resources:
-  - namespace.yaml
-  - pvcs.yaml
-  - nginx-proxy-configmap.yaml
-  - nginx-proxy-deployment.yaml
+  - resources/namespace.yaml
+  - resources/pvcs.yaml
+  - resources/nginx-proxy-configmap.yaml
+  - resources/nginx-proxy-deployment.yaml
 
 # Use Helm to generate the manifests
 helmCharts:
@@ -24,11 +24,11 @@ helmCharts:
 
 # Patches for Coral USB support and environment secrets
 patches:
-  - path: coral-usb-patch.yaml
+  - path: patches/coral-usb-patch.yaml
     target:
       kind: Deployment
       name: frigate
-  - path: env-secrets-patch.yaml
+  - path: patches/env-secrets-patch.yaml
     target:
       kind: Deployment
       name: frigate
