@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: openebs
+
+resources:
+  - https://openebs.github.io/charts/openebs-operator-lite.yaml
+  - resources/storage-class.yaml
+
+generators:
+  - secrets-generator.yaml
+
+patches:
+  - path: patches/tolerate-control-plane.yaml
+
+commonLabels:
+  app: openebs-storage
