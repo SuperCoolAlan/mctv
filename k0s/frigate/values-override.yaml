@@ -30,18 +30,18 @@ persistence:
 # Resource limits for Raspberry Pi
 resources:
   limits:
-    memory: 2Gi
-    cpu: 2000m
+    memory: 2Gi     # Full allocation for Frigate runtime
+    cpu: 2000m      # Allow full CPU usage
   requests:
-    memory: 1Gi
-    cpu: 1000m
+    memory: 1Gi     # Higher request for stable startup
+    cpu: 1000m      # Higher CPU request for startup tasks
 
 # Basic Frigate configuration
 config: |
   # Authentication configuration
   auth:
     enabled: true
-    reset_admin_password: false  # Check initial deployment logs for admin password
+    reset_admin_password: false # Password reset disabled
     failed_login_rate_limit: "1/second;5/minute;20/hour"
     trusted_proxies:
       # Internal Kubernetes networks
@@ -82,19 +82,18 @@ config: |
     width: 320
     height: 320
 
-  # Reolink camera at 10.0.1.18
+  # Reolink camera at 192.168.1.101
   cameras:
     reolink_camera:
-      enabled: true  # Camera is active and recording
+      enabled: true
       ffmpeg:
         inputs:
-          # Main stream: 1920x1080 H.264 for high-quality recordings
-          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@10.0.1.18:554/h264Preview_01_main
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_main
             roles:
               - record  # Continuous recording
               - audio   # Audio recording enabled
           # Sub stream: Lower resolution for efficient motion detection
-          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@10.0.1.18:554/h264Preview_01_sub
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_sub
             roles:
               - detect  # Object detection via Coral EdgeTPU
         # Hardware acceleration disabled on Raspberry Pi
@@ -111,13 +110,9 @@ config: |
         retain:
           days: 14
           mode: all
-        alerts:
+        events:
           retain:
-            days: 30
-            mode: motion
-        detections:
-          retain:
-            days: 30
+            default: 30
             mode: motion
       snapshots:
         enabled: true
