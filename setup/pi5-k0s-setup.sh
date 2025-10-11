@@ -197,6 +197,10 @@ show_next_steps() {
     echo "   k0sctl kubeconfig --config cluster.yaml > kubeconfig"
     echo "   export KUBECONFIG=\$(pwd)/kubeconfig"
     echo ""
+    echo "6. IMPORTANT: Run the dynamic IP script after deployment:"
+    echo "   sudo ./ensure-dynamic-ip.sh"
+    echo "   This prevents issues when switching between ethernet/wifi"
+    echo ""
     
     if [ "$NEEDS_REBOOT" = true ]; then
         if [ "$AUTO_CONFIRM" != "true" ]; then

@@ -1,0 +1,26 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: mctv3
+spec:
+  hosts:
+  - role: controller+worker
+    ssh:
+      address: 192.168.12.149
+      user: alan
+      keyPath: ~/.ssh/id_rsa
+    installFlags:
+      - --enable-worker
+      - --kubelet-extra-args="--node-ip=192.168.12.149"
+  k0s:
+    config:
+      spec:
+        api:
+          address: 192.168.12.149
+          sans:
+          - mctv3.lan
+          - mctv3.local
+          - 192.168.12.149
+        storage:
+          etcd:
+            peerAddress: 192.168.12.149

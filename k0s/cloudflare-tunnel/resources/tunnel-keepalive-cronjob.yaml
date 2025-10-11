@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tunnel-keepalive
+  namespace: cloudflare
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: keepalive
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Sending keepalive request to momscloset.asandov.com"
+              curl -ksSf https://momscloset.asandov.com/api/config -o /dev/null || true
+              echo "Keepalive request completed"
+          restartPolicy: Never
