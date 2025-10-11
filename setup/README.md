@@ -48,8 +48,44 @@ Backup and disaster recovery tool.
 Prepares the system for Google Coral USB TPU support.
 - Installs udev rules for proper device permissions
 - Configures USB access for containers
-- Verifies Coral device detection
-- **Note:** Run this before deploying Frigate if using Coral for object detection
+
+### 7. `ensure-dynamic-ip.sh` **⚠️ IMPORTANT**
+**Run this after k0s deployment to prevent network switching issues!**
+- Removes hardcoded IP addresses from k0s configuration
+- Fixes "etcd connection refused" errors when switching between ethernet/wifi
+- Updates etcd to bind to all interfaces (0.0.0.0)
+- Makes the cluster work across different networks
+
+**When to run:**
+- After initial k0s deployment via k0sctl
+- If you encounter connection issues after network changes
+- Before moving the Pi to a different network
+
+## Common Issues and Troubleshooting
+
+### Network Switching Issues (Ethernet ↔ WiFi)
+**Problem:** After switching networks, k0s fails with "etcd connection refused" errors.
+
+**Solution:** Run the dynamic IP fix script:
+```bash
+ssh alan@mctv3.local
+sudo ./ensure-dynamic-ip.sh
+```
+
+**Prevention:** Always run this script after initial k0s deployment to prevent future issues.
+
+### Hardcoded IP Issues
+**Symptoms:**
+- k0s fails to start after network change
+- etcd shows "connection refused" errors
+- kubectl cannot connect after IP change
+
+**Root Causes:**
+1. IP address hardcoded in k0s SANs list
+2. etcd peerAddress set to specific IP
+3. kubelet --node-ip flag with hardcoded IP
+
+**Fix:** The `ensure-dynamic-ip.sh` script automatically fixes all these issues.
 
 ## Quick Start
 
@@ -73,10 +109,24 @@ Prepares the system for Google Coral USB TPU support.
    # Select option 1 for full deployment
    ```
 
-4. **Access your cluster:**
+4. **IMPORTANT: Make cluster network-agnostic:**
+   ```bash
+   # SSH to the Pi and run:
+   ssh alan@mctv3.local
+   sudo ./ensure-dynamic-ip.sh
+   ```
+   This prevents issues when switching between ethernet/wifi networks.
+
+5. **Access your cluster:**
    ```bash
    export KUBECONFIG=$(pwd)/kubeconfig.yaml
    kubectl get nodes
+   ```
+
+6. **Deploy services:**
+   ```bash
+   # Deploy Cloudflare, Frigate, and Twingate
+   # See Step 5 in the detailed instructions below
    ```
 
 ## Step-by-Step Deployment
@@ -114,7 +164,33 @@ Verify your cluster is healthy:
 # Select option 1 for full validation
 ```
 
-### Step 5: Backup
+### Step 5: Deploy Services
+After the k0s cluster is running, deploy your applications:
+```bash
+# Set the kubeconfig
+export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+
+# Deploy services from the parent directory
+cd ..
+
+# Deploy Cloudflare Tunnel (for secure external access)
+cd cloudflared
+kustomize build --enable-exec --enable-alpha-plugins . | kubectl apply -f -
+
+# Deploy Frigate NVR (for camera recording)
+# Note: If using Coral USB TPU, run setup-coral-usb.sh first
+cd ../frigate
+kustomize build --enable-exec --enable-alpha-plugins . | kubectl apply -f -
+
+# Deploy Twingate (for zero-trust network access)
+cd ../twingate
+kustomize build --enable-exec --enable-alpha-plugins . | kubectl apply -f -
+
+# Verify all services are running
+kubectl get pods -A
+```
+
+### Step 6: Backup
 Create a backup of your deployment:
 ```bash
 ./backup-restore.sh

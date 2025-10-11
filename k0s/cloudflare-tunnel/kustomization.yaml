@@ -9,7 +9,11 @@ resources:
   - resources/tunnel-config.yaml
   - resources/tunnel-credentials-dummy.yaml
   - resources/cloudflared-deployment.yaml
+  - resources/tunnel-keepalive-cronjob.yaml
 
 # Secrets are managed via SOPS
 generators:
   - secrets-generator.yaml
+
+patches:
+  - path: patches/tolerate-control-plane.yaml

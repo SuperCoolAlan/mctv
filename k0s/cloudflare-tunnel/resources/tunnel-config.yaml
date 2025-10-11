@@ -12,13 +12,17 @@ data:
     # NOTE: Add all service routing rules here. Each service that needs external
     # access through Cloudflare tunnel should have an entry below.
     ingress:
-      # Frigate NVR - Camera system (MUST use HTTPS on port 8971 for auth!)
+      # Frigate NVR - Camera system (routes through nginx proxy for CORS/IPv6 fixes)
       - hostname: momscloset.asandov.com
-        service: https://frigate.frigate.svc.cluster.local:8971
+        service: http://frigate-nginx-proxy.frigate.svc.cluster.local:8080
         originRequest:
           connectTimeout: 30s
           tcpKeepAlive: 30s
           keepAliveTimeout: 90s
+          keepAliveConnections: 1
+          # No TLS verification needed for HTTP
+          disableChunkedEncoding: false
+          http2Origin: false
       
       # Add more services here as needed:
       # - hostname: service.asandov.com
