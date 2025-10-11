@@ -164,7 +164,7 @@ test_connection() {
 run_remote() {
     log_info "Configuring WiFi on remote Raspberry Pi..."
     
-    ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" << REMOTE_SCRIPT
+    ssh -T -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" << REMOTE_SCRIPT
 #!/bin/bash
 set -e
 

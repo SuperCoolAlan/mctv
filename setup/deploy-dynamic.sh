@@ -26,13 +26,41 @@ log_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
+# Prepare NVMe storage for k0s
+prepare_nvme_storage() {
+    log_info "Preparing NVMe storage on target host..."
+
+    # Check if NVMe is already configured
+    if ssh -i ~/.ssh/momscloset alan@mctv3.local "mount | grep -q '/mnt/nvme'" 2>/dev/null; then
+        log_info "NVMe storage already mounted"
+    else
+        log_warn "NVMe storage not mounted, please ensure NVMe is properly configured"
+        log_warn "Run the pi5-k0s-setup-auto.sh script on the Pi first to configure NVMe"
+        return 1
+    fi
+
+    # Ensure k0s directory exists on NVMe
+    ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo mkdir -p /mnt/nvme/k0s && sudo chown root:root /mnt/nvme/k0s" || {
+        log_error "Failed to create k0s directory on NVMe"
+        return 1
+    }
+
+    return 0
+}
+
 # Deploy k0s with dynamic IP workaround
 deploy_k0s_dynamic() {
     log_step "Deploying k0s with dynamic IP support..."
 
+    # Ensure NVMe is ready
+    if ! prepare_nvme_storage; then
+        log_error "NVMe storage not ready, aborting deployment"
+        exit 1
+    fi
+
     # First, clean any existing installation
     log_info "Cleaning any existing k0s installation..."
-    ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo k0s reset --data-dir=/var/lib/k0s 2>/dev/null || true; sudo systemctl stop k0scontroller 2>/dev/null || true; sudo systemctl disable k0scontroller 2>/dev/null || true; sudo rm -f /etc/systemd/system/k0scontroller.service; sudo systemctl daemon-reload; sudo rm -rf /var/lib/k0s /etc/k0s" || true
+    ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo k0s reset --data-dir=/mnt/nvme/k0s 2>/dev/null || true; sudo systemctl stop k0scontroller 2>/dev/null || true; sudo systemctl disable k0scontroller 2>/dev/null || true; sudo rm -f /etc/systemd/system/k0scontroller.service; sudo systemctl daemon-reload; sudo rm -rf /mnt/nvme/k0s /etc/k0s" || true
 
     # Deploy with k0sctl
     log_info "Running k0sctl apply..."

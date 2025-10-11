@@ -73,6 +73,29 @@ phase1_pi_setup() {
     # Add new SSH key
     ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/momscloset alan@mctv3.local "echo 'SSH key accepted'" || true
 
+    # Check if dpkg is locked (fresh boot updates)
+    log_info "Checking if system updates are running..."
+    local max_wait=60
+    local waited=0
+    while ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo lsof /var/lib/dpkg/lock-frontend 2>/dev/null | grep -q dpkg" && [ $waited -lt $max_wait ]; do
+        log_warn "System is running automatic updates, waiting... ($waited/$max_wait seconds)"
+        sleep 10
+        waited=$((waited + 10))
+    done
+    if [ $waited -ge $max_wait ]; then
+        log_warn "System updates still running after $max_wait seconds, proceeding anyway"
+    fi
+
+    # Configure WiFi FIRST so it works after reboot
+    log_info "Configuring WiFi for deployment..."
+    if [ -f .env ]; then
+        ./wifi-config.sh --remote
+    else
+        log_error "WiFi configuration file .env not found!"
+        log_info "Please create setup/.env from setup/.env.template with WiFi credentials"
+        exit 1
+    fi
+
     # Run remote setup
     log_info "Running initial Pi setup (will configure cgroups, install dependencies)..."
     # Pass -y flag if we're in auto mode
@@ -212,10 +235,11 @@ main() {
     # Ask for confirmation
     echo ""
     log_warn "This will:"
-    echo "  1. Configure Raspberry Pi at mctv3.local"
-    echo "  2. Deploy k0s cluster with dynamic IP support"
-    echo "  3. Deploy all services (storage, Cloudflare, Frigate, Twingate)"
-    echo "  4. Configure Frigate with Coral TPU support"
+    echo "  1. Configure WiFi for deployment (momscloset network)"
+    echo "  2. Configure Raspberry Pi at mctv3.local"
+    echo "  3. Deploy k0s cluster with dynamic IP support"
+    echo "  4. Deploy all services (storage, Cloudflare, Frigate, Twingate)"
+    echo "  5. Configure Frigate with Coral TPU support"
     echo ""
 
     if [ "$AUTO_MODE" != "true" ]; then
