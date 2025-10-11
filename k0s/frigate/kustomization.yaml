@@ -5,7 +5,6 @@ namespace: frigate
 
 # Create the namespace
 resources:
-  - resources/namespace.yaml
   - resources/pvcs.yaml
   - resources/nginx-proxy-configmap.yaml
   - resources/nginx-proxy-deployment.yaml
