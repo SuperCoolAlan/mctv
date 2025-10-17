@@ -8,6 +8,9 @@ resources:
   - resources/pvcs.yaml
   - resources/nginx-proxy-configmap.yaml
   - resources/nginx-proxy-deployment.yaml
+  - resources/frigate-watchdog-rbac.yaml
+  - resources/frigate-watchdog-configmap.yaml
+  - resources/frigate-watchdog-deployment.yaml
 
 # Use Helm to generate the manifests
 helmCharts:

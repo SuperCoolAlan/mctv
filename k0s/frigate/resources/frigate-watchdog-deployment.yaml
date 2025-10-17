@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-watchdog
+  namespace: frigate
+  labels:
+    app: frigate-watchdog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frigate-watchdog
+  template:
+    metadata:
+      labels:
+        app: frigate-watchdog
+    spec:
+      serviceAccountName: frigate-watchdog
+      containers:
+      - name: watchdog
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash"]
+        args: ["/scripts/watchdog.sh"]
+        volumeMounts:
+        - name: watchdog-script
+          mountPath: /scripts
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        env:
+        - name: HOME
+          value: /tmp
+      volumes:
+      - name: watchdog-script
+        configMap:
+          name: frigate-watchdog-script
+          defaultMode: 0755
+      restartPolicy: Always

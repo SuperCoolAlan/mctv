@@ -4,7 +4,7 @@
 
 # Coral EdgeTPU configuration
 coral:
-  enabled: false
+  enabled: true
   hostPath: /dev/bus/usb
 
 # Ingress disabled - using Cloudflare Tunnel with NGINX proxy
@@ -72,19 +72,19 @@ config: |
   # Object detection configuration
   detectors:
     # Coral EdgeTPU USB accelerator for efficient object detection
-    # coral:
-    #   type: edgetpu
-    #   device: usb
-    # CPU detector for testing
-    cpu1:
-      type: cpu
-      num_threads: 3
+    coral:
+      type: edgetpu
+      device: usb
+    # CPU detector for testing (watchdog will auto-enable if Coral fails)
+    # cpu1:
+    #   type: cpu
+    #   num_threads: 3
 
   # Model optimized for EdgeTPU
-  # model:
-  #   path: /edgetpu_model.tflite  # Pre-included EdgeTPU model
-  #   width: 320
-  #   height: 320
+  model:
+    path: /edgetpu_model.tflite  # Pre-included EdgeTPU model
+    width: 320
+    height: 320
 
   # Reolink camera at 192.168.1.101
   cameras:

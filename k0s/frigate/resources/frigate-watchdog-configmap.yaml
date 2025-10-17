@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frigate-watchdog-script
+  namespace: frigate
+data:
+  watchdog.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    # Configuration
+    NAMESPACE="frigate"
+    DEPLOYMENT_NAME="frigate"
+    CONFIGMAP_NAME="frigate"
+    CHECK_INTERVAL=30  # Check every 30 seconds
+    FAILURE_THRESHOLD=3  # Number of consecutive failures before switching
+    FAILURE_COUNT=0
+    FALLBACK_ACTIVE=false
+
+    echo "[$(date)] Frigate Coral watchdog starting..."
+    echo "[$(date)] Monitoring for Coral detection failures"
+    echo "[$(date)] Failure threshold: $FAILURE_THRESHOLD"
+
+    while true; do
+      # Get the current Frigate pod name
+      POD_NAME=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=frigate -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+      if [ -z "$POD_NAME" ]; then
+        echo "[$(date)] No Frigate pod found, waiting..."
+        sleep $CHECK_INTERVAL
+        continue
+      fi
+
+      # Check if pod is running
+      POD_STATUS=$(kubectl get pod -n $NAMESPACE $POD_NAME -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+
+      if [ "$POD_STATUS" != "Running" ]; then
+        echo "[$(date)] Pod $POD_NAME is not running (status: $POD_STATUS), waiting..."
+        sleep $CHECK_INTERVAL
+        continue
+      fi
+
+      # Check logs for Coral detection errors and USB transfer errors in the last 2 minutes
+      CORAL_ERROR=$(kubectl logs -n $NAMESPACE $POD_NAME --since=2m 2>/dev/null | \
+        grep -E "(No EdgeTPU was detected|Failed to load delegate from libedgetpu|ValueError.*edgetpu|USB transfer error|HandleQueuedBulkIn transfer.*failed|Fatal Python error)" || echo "")
+
+      if [ -n "$CORAL_ERROR" ]; then
+        FAILURE_COUNT=$((FAILURE_COUNT + 1))
+        echo "[$(date)] Coral detection error detected (count: $FAILURE_COUNT/$FAILURE_THRESHOLD)"
+
+        if [ $FAILURE_COUNT -ge $FAILURE_THRESHOLD ] && [ "$FALLBACK_ACTIVE" = "false" ]; then
+          echo "[$(date)] ⚠️  Coral failures exceeded threshold! Switching to CPU detector..."
+
+          # Extract the current config
+          kubectl get configmap -n $NAMESPACE $CONFIGMAP_NAME -o jsonpath='{.data.config\.yml}' > /tmp/config.yml
+
+          # Use awk to replace the detectors section with CPU config
+          # This preserves all other config and only replaces detectors section
+          awk '
+            BEGIN { in_detectors=0; in_model=0 }
+
+            # Detect start of detectors section
+            /^detectors:/ {
+              print "detectors:"
+              print "  # Coral EdgeTPU USB accelerator (disabled by watchdog)"
+              print "  # coral:"
+              print "  #   type: edgetpu"
+              print "  #   device: usb"
+              print "  # CPU detector (auto-enabled by watchdog)"
+              print "  cpu1:"
+              print "    type: cpu"
+              print "    num_threads: 3"
+              print ""
+              in_detectors=1
+              next
+            }
+
+            # Detect end of detectors section (next top-level key)
+            in_detectors && /^[a-z]/ && !/^  / {
+              in_detectors=0
+            }
+
+            # Skip lines inside detectors section
+            in_detectors { next }
+
+            # Print all other lines
+            { print }
+          ' /tmp/config.yml > /tmp/config-updated.yml
+
+          # Update the ConfigMap
+          kubectl create configmap $CONFIGMAP_NAME \
+            --from-file=config.yml=/tmp/config-updated.yml \
+            --namespace=$NAMESPACE \
+            --dry-run=client -o yaml | \
+            kubectl apply -f -
+
+          echo "[$(date)] ConfigMap updated to use CPU detector"
+
+          # Delete the pod to trigger restart with new config
+          echo "[$(date)] Restarting Frigate pod..."
+          kubectl delete pod -n $NAMESPACE $POD_NAME
+
+          FALLBACK_ACTIVE=true
+          FAILURE_COUNT=0
+          echo "[$(date)] ✅ Fallback to CPU detector complete"
+          echo "[$(date)] Watchdog will continue monitoring but won't switch back automatically"
+        fi
+      else
+        # No error detected, check if we're using Coral successfully
+        CORAL_RUNNING=$(kubectl logs -n $NAMESPACE $POD_NAME --tail=100 2>/dev/null | \
+          grep -E "detector.coral.*Starting detection process" || echo "")
+
+        if [ -n "$CORAL_RUNNING" ] && [ "$FALLBACK_ACTIVE" = "false" ]; then
+          # Coral is working, reset failure count
+          if [ $FAILURE_COUNT -gt 0 ]; then
+            echo "[$(date)] Coral appears to be working, resetting failure count"
+            FAILURE_COUNT=0
+          fi
+        fi
+      fi
+
+      sleep $CHECK_INTERVAL
+    done
