@@ -55,7 +55,7 @@ data:
           kubectl get configmap -n $NAMESPACE $CONFIGMAP_NAME -o jsonpath='{.data.config\.yml}' > /tmp/config.yml
 
           # Use awk to replace the detectors section with CPU config
-          # This preserves all other config and only replaces detectors section
+          # Also remove the EdgeTPU model section since it only works with Coral
           awk '
             BEGIN { in_detectors=0; in_model=0 }
 
@@ -82,6 +82,20 @@ data:
 
             # Skip lines inside detectors section
             in_detectors { next }
+
+            # Detect and skip EdgeTPU model section
+            /^model:/ {
+              in_model=1
+              next
+            }
+
+            # Detect end of model section (next top-level key)
+            in_model && /^[a-z]/ && !/^  / {
+              in_model=0
+            }
+
+            # Skip lines inside model section
+            in_model { next }
 
             # Print all other lines
             { print }
