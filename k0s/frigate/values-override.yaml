@@ -70,21 +70,22 @@ config: |
     enabled: false  # Disable MQTT if not using Home Assistant
   
   # Object detection configuration
-  detectors:
-    # Coral EdgeTPU USB accelerator for efficient object detection
-    coral:
-      type: edgetpu
-      device: usb
-    # CPU detector for testing (watchdog will auto-enable if Coral fails)
-    # cpu1:
-    #   type: cpu
-    #   num_threads: 3
+  # Detectors disabled to reduce heat - waiting for cooling solution
+  # detectors:
+  #   # Coral EdgeTPU USB accelerator for efficient object detection
+  #   coral:
+  #     type: edgetpu
+  #     device: usb
+  #   # CPU detector for testing (watchdog will auto-enable if Coral fails)
+  #   # cpu1:
+  #   #   type: cpu
+  #   #   num_threads: 3
 
   # Model optimized for EdgeTPU
-  model:
-    path: /edgetpu_model.tflite  # Pre-included EdgeTPU model
-    width: 320
-    height: 320
+  # model:
+  #   path: /edgetpu_model.tflite  # Pre-included EdgeTPU model
+  #   width: 320
+  #   height: 320
 
   # Reolink camera at 192.168.1.101
   cameras:
@@ -93,11 +94,23 @@ config: |
       ffmpeg:
         inputs:
           - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_main
+            input_args: preset-rtsp-restream  # Standard RTSP preset
             roles:
               - record  # Continuous recording
               - audio   # Audio recording enabled
           # Sub stream: Lower resolution for efficient motion detection
           - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_sub
+            input_args:
+              - -avoid_negative_ts
+              - make_zero
+              - -fflags
+              - nobuffer
+              - -flags
+              - low_delay
+              - -strict
+              - experimental
+              - -r
+              - "5"  # Limit input FPS to 5 to match detection fps
             roles:
               - detect  # Object detection via Coral EdgeTPU
         # Hardware acceleration disabled on Raspberry Pi
@@ -105,7 +118,7 @@ config: |
         output_args:
           record: preset-record-generic-audio-aac  # AAC audio codec
       detect:
-        enabled: true
+        enabled: false  # Disabled - no detector configured
         width: 1920
         height: 1080
         fps: 5
