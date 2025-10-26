@@ -12,3 +12,17 @@ metadata:
     storageclass.kubernetes.io/is-default-class: "true"
 provisioner: openebs.io/local
 volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-hostpath-root
+  annotations:
+    openebs.io/cas-type: local
+    cas.openebs.io/config: |
+      - name: StorageType
+        value: "hostpath"
+      - name: BasePath
+        value: "/var/openebs/local/"
+provisioner: openebs.io/local
+volumeBindingMode: WaitForFirstConsumer
