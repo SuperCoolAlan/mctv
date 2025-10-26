@@ -8,7 +8,7 @@ metadata:
       - name: StorageType
         value: "hostpath"
       - name: BasePath
-        value: "/var/openebs/local/"
+        value: "/mnt/cctv/openebs/local/"
     storageclass.kubernetes.io/is-default-class: "true"
 provisioner: openebs.io/local
 volumeBindingMode: WaitForFirstConsumer
