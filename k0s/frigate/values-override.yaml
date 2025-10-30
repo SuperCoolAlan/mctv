@@ -38,6 +38,10 @@ resources:
 
 # Basic Frigate configuration
 config: |
+  # Birdseye disabled to reduce ffmpeg processes and CPU load
+  birdseye:
+    enabled: false
+
   # Authentication configuration
   auth:
     enabled: true
@@ -100,15 +104,17 @@ config: |
           - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_sub
             roles:
               - detect  # Object detection via Coral EdgeTPU
-        # Hardware acceleration disabled on Raspberry Pi
-        hwaccel_args: []
+        # Hardware acceleration disabled - container doesn't have access to /dev/video* devices
+        # hwaccel_args:
+        #   - -c:v
+        #   - h264_v4l2m2m
         output_args:
           record: preset-record-generic-audio-aac  # AAC audio codec
       detect:
         enabled: true
         width: 1920
         height: 1080
-        fps: 5
+        fps: 3  # Reduced from 5 to lower CPU load
       record:
         enabled: true
         retain:
