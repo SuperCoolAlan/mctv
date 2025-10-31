@@ -104,10 +104,8 @@ config: |
           - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_sub
             roles:
               - detect  # Object detection via Coral EdgeTPU
-        # Hardware acceleration disabled - container doesn't have access to /dev/video* devices
-        # hwaccel_args:
-        #   - -c:v
-        #   - h264_v4l2m2m
+        # Hardware acceleration disabled - Pi 5 only supports H.265 hardware decode, not H.264
+        # hwaccel_args: -hwaccel drm
         output_args:
           record: preset-record-generic-audio-aac  # AAC audio codec
       detect:
