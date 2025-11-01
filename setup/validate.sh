@@ -37,10 +37,10 @@ log_info() {
 check_ssh() {
     log_info "Checking SSH connectivity..."
     
-    if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv3.local "echo 'connected'" &>/dev/null; then
-        log_pass "SSH connection to mctv3.local"
+    if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv4.local "echo 'connected'" &>/dev/null; then
+        log_pass "SSH connection to mctv4.local"
     else
-        log_fail "Cannot connect to mctv3.local via SSH"
+        log_fail "Cannot connect to mctv4.local via SSH"
         return 1
     fi
 }
@@ -50,22 +50,22 @@ check_pi_system() {
     log_info "Checking Raspberry Pi system..."
     
     # Check OS version
-    OS_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null || echo "Unknown")
+    OS_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null || echo "Unknown")
     log_info "OS: $OS_INFO"
     
     # Check cgroups
-    if ssh -i ~/.ssh/momscloset alan@mctv3.local "grep -q 'cgroup_enable=memory' /boot/cmdline.txt" 2>/dev/null; then
+    if ssh -i ~/.ssh/momscloset alan@mctv4.local "grep -q 'cgroup_enable=memory' /boot/cmdline.txt" 2>/dev/null; then
         log_pass "Memory cgroups enabled"
     else
         log_fail "Memory cgroups not enabled in /boot/cmdline.txt"
     fi
     
     # Check memory
-    MEM_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "free -h | grep Mem" 2>/dev/null)
+    MEM_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "free -h | grep Mem" 2>/dev/null)
     log_info "Memory: $MEM_INFO"
     
     # Check disk space
-    DISK_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "df -h / | tail -1" 2>/dev/null)
+    DISK_INFO=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "df -h / | tail -1" 2>/dev/null)
     DISK_USAGE=$(echo "$DISK_INFO" | awk '{print $5}' | sed 's/%//')
     
     if [ "$DISK_USAGE" -lt 80 ]; then
@@ -77,7 +77,7 @@ check_pi_system() {
     fi
     
     # Check system load
-    LOAD=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "uptime" 2>/dev/null)
+    LOAD=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "uptime" 2>/dev/null)
     log_info "Load: $LOAD"
 }
 
@@ -85,8 +85,8 @@ check_pi_system() {
 check_k0s_install() {
     log_info "Checking k0s installation..."
     
-    if ssh -i ~/.ssh/momscloset alan@mctv3.local "command -v k0s" &>/dev/null; then
-        K0S_VERSION=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "k0s version" 2>/dev/null)
+    if ssh -i ~/.ssh/momscloset alan@mctv4.local "command -v k0s" &>/dev/null; then
+        K0S_VERSION=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "k0s version" 2>/dev/null)
         log_pass "k0s installed: $K0S_VERSION"
     else
         log_fail "k0s not installed"
@@ -94,13 +94,13 @@ check_k0s_install() {
     fi
     
     # Check k0s service
-    if ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo systemctl is-active k0scontroller" &>/dev/null; then
+    if ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo systemctl is-active k0scontroller" &>/dev/null; then
         log_pass "k0s controller service running"
     else
         log_warn "k0s controller service not running"
     fi
     
-    if ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo systemctl is-active k0sworker" &>/dev/null; then
+    if ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo systemctl is-active k0sworker" &>/dev/null; then
         log_pass "k0s worker service running"
     else
         # This might be expected if using controller+worker mode
@@ -182,7 +182,7 @@ check_network() {
     # Check if required ports are open
     PORTS=(6443 10250 2380 9443)
     for port in "${PORTS[@]}"; do
-        if nc -zv mctv3.local $port &>/dev/null; then
+        if nc -zv mctv4.local $port &>/dev/null; then
             log_pass "Port $port is accessible"
         else
             log_warn "Port $port is not accessible"
@@ -207,7 +207,7 @@ check_performance() {
     log_info "Checking performance metrics..."
     
     # Check CPU temperature (Raspberry Pi specific)
-    TEMP=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "vcgencmd measure_temp 2>/dev/null" || echo "temp=unknown")
+    TEMP=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "vcgencmd measure_temp 2>/dev/null" || echo "temp=unknown")
     TEMP_VALUE=$(echo "$TEMP" | sed 's/temp=//' | sed "s/'C//")
     
     if [ "$TEMP_VALUE" != "unknown" ]; then
@@ -222,7 +222,7 @@ check_performance() {
     fi
     
     # Check throttling
-    THROTTLE=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "vcgencmd get_throttled 2>/dev/null" || echo "throttled=unknown")
+    THROTTLE=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "vcgencmd get_throttled 2>/dev/null" || echo "throttled=unknown")
     if echo "$THROTTLE" | grep -q "throttled=0x0"; then
         log_pass "No throttling detected"
     elif [ "$THROTTLE" != "throttled=unknown" ]; then
@@ -256,7 +256,7 @@ generate_report() {
     {
         echo "k0s Cluster Validation Report"
         echo "Generated: $(date)"
-        echo "Host: mctv3.local"
+        echo "Host: mctv4.local"
         echo ""
         echo "Results:"
         echo "  Passed: $PASS_COUNT"
@@ -273,7 +273,7 @@ quick_check() {
     check_ssh || return 1
     
     # Quick k0s status
-    STATUS=$(ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo k0s status 2>/dev/null" || echo "Not running")
+    STATUS=$(ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo k0s status 2>/dev/null" || echo "Not running")
     echo "k0s status: $STATUS"
     
     # Quick node check

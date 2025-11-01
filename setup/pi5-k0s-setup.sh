@@ -186,7 +186,7 @@ show_next_steps() {
     echo "   - Or download from: https://github.com/k0sproject/k0sctl/releases"
     echo ""
     echo "3. Create a cluster.yaml file on your workstation with:"
-    echo "   - Hostname: mctv3.local"
+    echo "   - Hostname: mctv4.local"
     echo "   - Username: $(whoami)"
     echo "   - SSH key path: ~/.ssh/id_rsa"
     echo ""

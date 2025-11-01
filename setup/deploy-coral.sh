@@ -15,7 +15,7 @@ if [ -f "$(dirname "$0")/.env" ]; then
 fi
 
 # Set default values if not in .env
-RASPI_HOST=${RASPI_HOST:-"mctv3.local"}
+RASPI_HOST=${RASPI_HOST:-"mctv4.local"}
 RASPI_USER=${RASPI_USER:-"alan"}
 
 echo "Target: $RASPI_USER@$RASPI_HOST"

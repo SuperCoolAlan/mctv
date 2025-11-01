@@ -1,11 +1,11 @@
 apiVersion: k0sctl.k0sproject.io/v1beta1
 kind: Cluster
 metadata:
-  name: mctv3-k0s
+  name: mctv4-k0s
 spec:
   hosts:
   - ssh:
-      address: mctv3.local
+      address: 192.168.12.149
       user: alan
       port: 22
       keyPath: ~/.ssh/momscloset
@@ -13,7 +13,7 @@ spec:
     uploadBinary: true
     installFlags:
     - --enable-metrics-scraper
-    - --data-dir=/mnt/nvme/k0s
+    - --data-dir=/mnt/cctv/k0s
   
   k0s:
     version: 1.33.4+k0s.0
@@ -22,13 +22,16 @@ spec:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig
       metadata:
-        name: mctv3-cluster
+        name: mctv4-cluster
       spec:
         api:
+          address: 192.168.12.149
           port: 6443
           k0sApiPort: 9443
           sans:
-          - mctv3.local
+          - mctv4.local
+          - mctv4.lan
+          - 192.168.12.149
           - localhost
           - 127.0.0.1
         

@@ -42,11 +42,11 @@ check_prerequisites() {
 wait_for_pi() {
     log_info "Waiting for Pi to come back online..."
     for i in {1..60}; do
-        if ping -c 1 -W 1 mctv3.local > /dev/null 2>&1; then
+        if ping -c 1 -W 1 mctv4.local > /dev/null 2>&1; then
             log_info "Pi is responding to ping, waiting for SSH..."
             sleep 10
             for j in {1..30}; do
-                if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv3.local "echo 'SSH is ready'" &>/dev/null; then
+                if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv4.local "echo 'SSH is ready'" &>/dev/null; then
                     log_info "Pi is back online and SSH is ready!"
                     return 0
                 fi
@@ -67,17 +67,17 @@ phase1_pi_setup() {
     cd setup
 
     # Remove old SSH key if exists
-    ssh-keygen -R mctv3.local 2>/dev/null || true
+    ssh-keygen -R mctv4.local 2>/dev/null || true
     ssh-keygen -R 10.0.1.16 2>/dev/null || true
 
     # Add new SSH key
-    ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/momscloset alan@mctv3.local "echo 'SSH key accepted'" || true
+    ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/momscloset alan@mctv4.local "echo 'SSH key accepted'" || true
 
     # Check if dpkg is locked (fresh boot updates)
     log_info "Checking if system updates are running..."
     local max_wait=60
     local waited=0
-    while ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo lsof /var/lib/dpkg/lock-frontend 2>/dev/null | grep -q dpkg" && [ $waited -lt $max_wait ]; do
+    while ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo lsof /var/lib/dpkg/lock-frontend 2>/dev/null | grep -q dpkg" && [ $waited -lt $max_wait ]; do
         log_warn "System is running automatic updates, waiting... ($waited/$max_wait seconds)"
         sleep 10
         waited=$((waited + 10))
@@ -86,15 +86,8 @@ phase1_pi_setup() {
         log_warn "System updates still running after $max_wait seconds, proceeding anyway"
     fi
 
-    # Configure WiFi FIRST so it works after reboot
-    log_info "Configuring WiFi for deployment..."
-    if [ -f .env ]; then
-        ./wifi-config.sh --remote
-    else
-        log_error "WiFi configuration file .env not found!"
-        log_info "Please create setup/.env from setup/.env.template with WiFi credentials"
-        exit 1
-    fi
+    # WiFi already configured - skipping
+    log_info "WiFi already configured, skipping..."
 
     # Run remote setup
     log_info "Running initial Pi setup (will configure cgroups, install dependencies)..."
@@ -109,9 +102,9 @@ phase1_pi_setup() {
 
     # Check if Pi needs reboot after setup
     log_info "Checking if cgroups are active..."
-    if ! ssh -i ~/.ssh/momscloset alan@mctv3.local "[ -d /sys/fs/cgroup/memory ] && [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]" 2>/dev/null; then
+    if ! ssh -i ~/.ssh/momscloset alan@mctv4.local "[ -d /sys/fs/cgroup/memory ] && [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]" 2>/dev/null; then
         log_warn "Pi needs reboot for cgroups to be active. Rebooting now..."
-        ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo reboot" 2>/dev/null || true
+        ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo reboot" 2>/dev/null || true
         sleep 5
         wait_for_pi
     else
@@ -138,7 +131,7 @@ phase2_deploy_k0s() {
     sleep 30
 
     # Verify cluster
-    export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+    export KUBECONFIG=~/.kube/clusters/mctv4-lab.yaml
     local retries=5
     while [ $retries -gt 0 ]; do
         if kubectl get nodes 2>/dev/null | grep -q Ready; then
@@ -165,7 +158,7 @@ phase2_deploy_k0s() {
 phase3_deploy_services() {
     log_step "Phase 3: Deploy Services"
 
-    export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+    export KUBECONFIG=~/.kube/clusters/mctv4-lab.yaml
 
     # Deploy in order
     local services=(
@@ -194,7 +187,7 @@ phase3_deploy_services() {
 phase4_verify() {
     log_step "Phase 4: Verification"
 
-    export KUBECONFIG=~/.kube/clusters/mctv3.yaml
+    export KUBECONFIG=~/.kube/clusters/mctv4-lab.yaml
 
     # Check all pods
     log_info "Checking pod status..."
@@ -235,11 +228,10 @@ main() {
     # Ask for confirmation
     echo ""
     log_warn "This will:"
-    echo "  1. Configure WiFi for deployment (momscloset network)"
-    echo "  2. Configure Raspberry Pi at mctv3.local"
-    echo "  3. Deploy k0s cluster with dynamic IP support"
-    echo "  4. Deploy all services (storage, Cloudflare, Frigate, Twingate)"
-    echo "  5. Configure Frigate with Coral TPU support"
+    echo "  1. Configure Raspberry Pi at mctv4.local (cgroups, k0s dependencies)"
+    echo "  2. Deploy k0s cluster with dynamic IP support"
+    echo "  3. Deploy all services (storage, Cloudflare, Frigate, Twingate)"
+    echo "  4. Configure Frigate with motion-only recording (20 days retention)"
     echo ""
 
     if [ "$AUTO_MODE" != "true" ]; then

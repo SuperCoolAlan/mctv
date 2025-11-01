@@ -61,9 +61,9 @@ setup_ssh() {
     log_step "Setting up SSH authentication..."
     
     echo "Uploading SSH public key to Raspberry Pi..."
-    echo "You may be prompted for the password for alan@mctv3.local"
+    echo "You may be prompted for the password for alan@mctv4.local"
     
-    if ssh-copy-id -i ~/.ssh/momscloset.pub alan@mctv3.local 2>/dev/null; then
+    if ssh-copy-id -i ~/.ssh/momscloset.pub alan@mctv4.local 2>/dev/null; then
         log_info "SSH key uploaded successfully"
     else
         log_warn "SSH key may already be configured or upload failed"
@@ -71,14 +71,14 @@ setup_ssh() {
     
     # Test SSH connection
     log_info "Testing SSH connection..."
-    if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv3.local "echo 'SSH connection successful'" &>/dev/null; then
+    if ssh -i ~/.ssh/momscloset -o ConnectTimeout=5 alan@mctv4.local "echo 'SSH connection successful'" &>/dev/null; then
         log_info "SSH connection test passed"
     else
-        log_error "Cannot connect to mctv3.local via SSH"
+        log_error "Cannot connect to mctv4.local via SSH"
         echo "Please ensure:"
         echo "1. The Raspberry Pi is powered on and connected to the network"
         echo "2. SSH is enabled on the Raspberry Pi"
-        echo "3. The hostname 'mctv3.local' is resolvable"
+        echo "3. The hostname 'mctv4.local' is resolvable"
         exit 1
     fi
 }
@@ -93,10 +93,10 @@ prepare_pi() {
     
     if [ "$response" = "y" ]; then
         log_info "Copying setup script to Raspberry Pi..."
-        scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv3.local:/tmp/
+        scp -i ~/.ssh/momscloset pi5-k0s-setup.sh alan@mctv4.local:/tmp/
         
         log_info "Running setup script on Raspberry Pi..."
-        ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo bash /tmp/pi5-k0s-setup.sh"
+        ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo bash /tmp/pi5-k0s-setup.sh"
         
         log_warn "If the Pi rebooted for cgroup changes, wait for it to come back online and run this script again."
     fi

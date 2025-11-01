@@ -31,7 +31,7 @@ prepare_nvme_storage() {
     log_info "Preparing NVMe storage on target host..."
 
     # Check if NVMe is already configured
-    if ssh -i ~/.ssh/momscloset alan@mctv3.local "mount | grep -q '/mnt/nvme'" 2>/dev/null; then
+    if ssh -i ~/.ssh/momscloset alan@mctv4.local "mount | grep -q '/mnt/nvme'" 2>/dev/null; then
         log_info "NVMe storage already mounted"
     else
         log_warn "NVMe storage not mounted, please ensure NVMe is properly configured"
@@ -40,7 +40,7 @@ prepare_nvme_storage() {
     fi
 
     # Ensure k0s directory exists on NVMe
-    ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo mkdir -p /mnt/nvme/k0s && sudo chown root:root /mnt/nvme/k0s" || {
+    ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo mkdir -p /mnt/nvme/k0s && sudo chown root:root /mnt/nvme/k0s" || {
         log_error "Failed to create k0s directory on NVMe"
         return 1
     }
@@ -60,7 +60,7 @@ deploy_k0s_dynamic() {
 
     # First, clean any existing installation
     log_info "Cleaning any existing k0s installation..."
-    ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo k0s reset --data-dir=/mnt/nvme/k0s 2>/dev/null || true; sudo systemctl stop k0scontroller 2>/dev/null || true; sudo systemctl disable k0scontroller 2>/dev/null || true; sudo rm -f /etc/systemd/system/k0scontroller.service; sudo systemctl daemon-reload; sudo rm -rf /mnt/nvme/k0s /etc/k0s" || true
+    ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo k0s reset --data-dir=/mnt/nvme/k0s 2>/dev/null || true; sudo systemctl stop k0scontroller 2>/dev/null || true; sudo systemctl disable k0scontroller 2>/dev/null || true; sudo rm -f /etc/systemd/system/k0scontroller.service; sudo systemctl daemon-reload; sudo rm -rf /mnt/nvme/k0s /etc/k0s" || true
 
     # Deploy with k0sctl
     log_info "Running k0sctl apply..."
@@ -73,11 +73,11 @@ deploy_k0s_dynamic() {
     # Monitor and fix the service if it gets created with hardcoded IP
     log_info "Monitoring for hardcoded IP issues..."
     for i in {1..20}; do
-        if ssh -i ~/.ssh/momscloset alan@mctv3.local "test -f /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
+        if ssh -i ~/.ssh/momscloset alan@mctv4.local "test -f /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
             log_info "Found k0s service, checking for hardcoded IP..."
-            if ssh -i ~/.ssh/momscloset alan@mctv3.local "grep -q 'node-ip=' /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
+            if ssh -i ~/.ssh/momscloset alan@mctv4.local "grep -q 'node-ip=' /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
                 log_warn "Found hardcoded IP, removing it..."
-                ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo sed -i 's/--kubelet-extra-args=--node-ip=[0-9.]*//g' /etc/systemd/system/k0scontroller.service && sudo systemctl daemon-reload && sudo systemctl restart k0scontroller"
+                ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo sed -i 's/--kubelet-extra-args=--node-ip=[0-9.]*//g' /etc/systemd/system/k0scontroller.service && sudo systemctl daemon-reload && sudo systemctl restart k0scontroller"
                 log_info "Hardcoded IP removed and service restarted"
             fi
             break
@@ -92,9 +92,9 @@ deploy_k0s_dynamic() {
         log_info "k0s deployment completed!"
 
         # Final check and fix if needed
-        if ssh -i ~/.ssh/momscloset alan@mctv3.local "grep -q 'node-ip=' /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
+        if ssh -i ~/.ssh/momscloset alan@mctv4.local "grep -q 'node-ip=' /etc/systemd/system/k0scontroller.service" 2>/dev/null; then
             log_warn "Final cleanup of hardcoded IP..."
-            ssh -i ~/.ssh/momscloset alan@mctv3.local "sudo sed -i 's/--kubelet-extra-args=--node-ip=[0-9.]*//g' /etc/systemd/system/k0scontroller.service && sudo systemctl daemon-reload && sudo systemctl restart k0scontroller"
+            ssh -i ~/.ssh/momscloset alan@mctv4.local "sudo sed -i 's/--kubelet-extra-args=--node-ip=[0-9.]*//g' /etc/systemd/system/k0scontroller.service && sudo systemctl daemon-reload && sudo systemctl restart k0scontroller"
         fi
 
         # Remove control-plane taint
@@ -116,7 +116,7 @@ deploy_k0s_dynamic() {
 get_kubeconfig() {
     log_step "Retrieving kubeconfig..."
 
-    KUBECONFIG_PATH="$HOME/.kube/clusters/mctv3.yaml"
+    KUBECONFIG_PATH="$HOME/.kube/clusters/mctv4.yaml"
     mkdir -p "$(dirname "$KUBECONFIG_PATH")"
 
     k0sctl kubeconfig --config cluster.yaml > "$KUBECONFIG_PATH"
