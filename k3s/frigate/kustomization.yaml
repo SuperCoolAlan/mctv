@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: frigate
+
+resources:
+  - resources/namespace.yaml
+  - resources/storage.yaml
+  - resources/nginx-proxy-configmap.yaml
+  - resources/nginx-proxy-deployment.yaml
+
+helmCharts:
+  - name: frigate
+    repo: https://blakeblackshear.github.io/blakeshome-charts/
+    version: 7.6.0
+    releaseName: frigate
+    namespace: frigate
+    valuesFile: values-override.yaml
+
+patches:
+  - path: patches/coral-usb-patch.yaml
+    target:
+      kind: Deployment
+      name: frigate
+  - path: patches/env-secrets-patch.yaml
+    target:
+      kind: Deployment
+      name: frigate
+
+generators:
+  - secrets-generator.yaml

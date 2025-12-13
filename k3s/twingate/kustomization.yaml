@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: twingate
+
+resources:
+  - namespace.yaml
+
+generators:
+  - secrets-generator.yaml
+
+helmCharts:
+  - name: connector
+    repo: https://twingate.github.io/helm-charts
+    version: 0.1.31
+    releaseName: mctv5
+    namespace: twingate
+    valuesFile: values-override.yaml

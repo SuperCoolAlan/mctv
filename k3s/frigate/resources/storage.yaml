@@ -1,0 +1,52 @@
+# PV for media storage using dedicated CCTV partition
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: frigate-media-pv
+spec:
+  capacity:
+    storage: 170Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  local:
+    path: /mnt/cctv
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - mctv5
+---
+# PVC for media storage - binds to the hostPath PV
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: frigate-media
+  namespace: frigate
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  volumeName: frigate-media-pv
+  resources:
+    requests:
+      storage: 170Gi
+---
+# PVC for config storage - uses k3s local-path provisioner (root partition)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: frigate-config
+  namespace: frigate
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

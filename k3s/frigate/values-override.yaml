@@ -1,0 +1,132 @@
+# Custom values for Frigate deployment on k3s cluster (mctv5)
+# Overrides default values from the blakeshome-charts Helm chart v7.6.0
+
+# Coral EdgeTPU configuration
+coral:
+  enabled: false
+  hostPath: /dev/bus/usb
+
+# Ingress disabled - using Cloudflare Tunnel with NGINX proxy
+ingress:
+  enabled: false
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 5000
+
+# Persistence using local storage
+persistence:
+  config:
+    enabled: true
+    existingClaim: "frigate-config"
+  media:
+    enabled: true
+    existingClaim: "frigate-media"
+
+# Resource limits for Raspberry Pi 5
+resources:
+  limits:
+    memory: 2Gi
+    cpu: 2000m
+  requests:
+    memory: 1Gi
+    cpu: 1000m
+
+# Basic Frigate configuration
+config: |
+  # Birdseye disabled to reduce ffmpeg processes and CPU load
+  birdseye:
+    enabled: false
+
+  # Authentication configuration
+  auth:
+    enabled: true
+    reset_admin_password: false
+    failed_login_rate_limit: "1/second;5/minute;20/hour"
+    trusted_proxies:
+      # k3s pod/service networks
+      - 10.42.0.0/16
+      - 10.43.0.0/16
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      # Cloudflare proxy IPs (IPv4)
+      - 173.245.48.0/20
+      - 103.21.244.0/22
+      - 103.22.200.0/22
+      - 103.31.4.0/22
+      - 141.101.64.0/18
+      - 108.162.192.0/18
+      - 190.93.240.0/20
+      - 188.114.96.0/20
+      - 197.234.240.0/22
+      - 198.41.128.0/17
+      - 162.158.0.0/15
+      - 104.16.0.0/13
+      - 104.24.0.0/14
+      - 172.64.0.0/13
+      - 131.0.72.0/22
+
+  mqtt:
+    enabled: false
+
+  # Object detection - CPU only for now
+  detectors:
+    cpu1:
+      type: cpu
+      num_threads: 3
+
+  # Reolink camera
+  cameras:
+    mctv:
+      enabled: true
+      ffmpeg:
+        inputs:
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_main
+            roles:
+              - record
+              - audio
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_sub
+            roles:
+              - detect
+        output_args:
+          record: preset-record-generic-audio-aac
+      detect:
+        enabled: true
+        width: 1920
+        height: 1080
+        fps: 3
+      record:
+        enabled: true
+        retain:
+          days: 30
+          mode: all
+        events:
+          retain:
+            default: 30
+            mode: motion
+      snapshots:
+        enabled: true
+        timestamp: true
+        retain:
+          default: 30
+      audio:
+        enabled: true
+
+# Environment
+env:
+  TZ: "America/Chicago"
+
+# Shared memory for inter-process communication
+shmSize: 256Mi
+
+# Temporary filesystem for cache
+tmpfs:
+  enabled: false
+  sizeLimit: 256Mi
+
+# Additional environment variables
+extraEnvVars:
+  - name: FRIGATE_TMPFS_CACHE_SIZE
+    value: "256m"
