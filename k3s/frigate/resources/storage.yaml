@@ -20,7 +20,7 @@ spec:
             - key: kubernetes.io/hostname
               operator: In
               values:
-                - mctv5
+                - mctv5.lan
 ---
 # PVC for media storage - binds to the hostPath PV
 apiVersion: v1

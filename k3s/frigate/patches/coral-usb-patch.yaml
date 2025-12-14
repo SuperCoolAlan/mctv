@@ -28,5 +28,3 @@ spec:
         hostPath:
           path: /sys
           type: Directory
-      nodeSelector:
-        kubernetes.io/hostname: mctv5

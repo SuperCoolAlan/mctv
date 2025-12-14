@@ -1,6 +1,9 @@
 # Custom values for Frigate deployment on k3s cluster (mctv5)
 # Overrides default values from the blakeshome-charts Helm chart v7.6.0
 
+image:
+  tag: 0.16.2
+
 # Coral EdgeTPU configuration
 coral:
   enabled: false
@@ -83,11 +86,11 @@ config: |
       enabled: true
       ffmpeg:
         inputs:
-          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_main
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_main
             roles:
               - record
               - audio
-          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@Camera1.asandov.local:554/h264Preview_01_sub
+          - path: rtsp://{FRIGATE_REOLINK_USERNAME}:{FRIGATE_REOLINK_PASSWORD}@192.168.1.101:554/h264Preview_01_sub
             roles:
               - detect
         output_args:
