@@ -1,3 +1,7 @@
+> [!WARNING]
+> **Deprecated.** This Raspberry Pi 5 / k0s stack is no longer maintained. It is replaced by
+> [looped-cctv](https://github.com/SuperCoolAlan/looped-cctv): Frigate on Docker Compose on an OnLogic FR201.
+
 # MCTV K0s Cluster - Complete Setup Guide
 
 This repository contains everything needed to set up a k0s Kubernetes cluster on a Raspberry Pi 5 with Frigate NVR, Cloudflare Tunnel, and Twingate.
